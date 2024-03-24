@@ -1,15 +1,12 @@
 body {
   font-family: Helvetica, Arial, sans-serif;
   padding: 10px;
+  width: 220px;
+  font-size: 14px;
 }
 
-label {
-  display: block;
-  margin-bottom: 5px;
-}
-
-input {
-  margin-bottom: 10px;
+hr {
+  padding: -2px;
 }
 
 button {
@@ -18,4 +15,8 @@ button {
 
 #article-name{
   font-weight: bold;
+}
+
+#article-info{
+  padding-bottom: 10px;
 }
