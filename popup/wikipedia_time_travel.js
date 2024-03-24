@@ -1,40 +1,50 @@
 const MEDIAWIKI_API_ENDPOINT = "https://en.wikipedia.org/w/index.php?"
+const MEDIAWIKI_API_QUERY =
+  "https://en.wikipedia.org/w/api.php?action=query&prop=info&format=json&origin=*"
 const MEDIAWIKI_API_GET_REVISION =
   "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvlimit=1&rvprop=timestamp%7Cids&origin=*"
 const MEDIAWIKI_API_GET_FIRST_REVISION =
   "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvlimit=1&rvprop=timestamp%7Cids&origin=*&rvdir=newer"
 
 function isWikipediaArticle(url) {
-  // Check if the URL matches the pattern of Wikipedia articles
-  return url.includes("wikipedia.org/wiki/") || url.includes("wikipedia.org/w/index.php?title=")
+  return (
+    url.includes("wikipedia.org/wiki/") ||
+    url.includes("wikipedia.org/w/index.php?title=") ||
+    url.includes("wikipedia.org/w/index.php?&oldid=")
+  )
 }
 
-function extractWikipediaArticleRawName(url) {
-  // Extract the article title from the URL
-  let articleName = null
-
+async function extractWikipediaArticleRawName(url) {
   if (url.includes("wikipedia.org/wiki/")) {
-    articleName = url.split("/wiki/")[1]
-  } else if (url.includes("wikipedia.org/w/index.php?title=")) {
-    // Create a URL object
-    const parsedUrl = new URL(url)
-    // Use URLSearchParams to work with the query string
-    const queryParams = new URLSearchParams(parsedUrl.search)
-    // Get the value of the "title" parameter
-    articleName = queryParams.get("title")
+    return url.split("/wiki/")[1]
   }
+  if (url.includes("wikipedia.org/w/index.php")) {
+    const parsedUrl = new URL(url)
+    const queryParams = new URLSearchParams(parsedUrl.search)
 
-  return articleName
+    if (queryParams.has("title")) {
+      return queryParams.get("title")
+    }
+    if (queryParams.has("oldid")) {
+      const response = await fetch(MEDIAWIKI_API_QUERY + "&revids=" + queryParams.get("oldid"))
+      const data = await response.json()
+      const pageId = Object.keys(data.query.pages)
+      return data.query.pages[pageId].title
+    } else {
+      throw new Error("Could not extract article name from URL.")
+    }
+  }
 }
 
-async function displayWikipediaArticleName(articleNameRaw) {
-  // Extract the article name from the URL
+async function displayWikipediaArticleData(articleNameRaw) {
+  console.log("Raw name: " + articleNameRaw)
   const articleName = decodeURIComponent(articleNameRaw).replace(/_/g, " ")
   // Get the creation date of the page
+  console.log("Clean name: " + articleName)
   const creationDate = await getCreationDate(articleNameRaw)
   // Display the article name and creation date
   document.getElementById("article-name").textContent = articleName
-  document.getElementById("article-creation-date").textContent = "Created on " + creationDate
+  document.getElementById("article-creation-date").textContent = "Page created on " + creationDate
 }
 
 async function getCreationDate(articleName) {
@@ -53,18 +63,36 @@ async function getCreationDate(articleName) {
   return formattedDate
 }
 
-// Actions for popup open
+async function openArticleinSelectedDate(rawName, date) {
+  try {
+    var response = fetch(
+      MEDIAWIKI_API_GET_REVISION + "&titles=" + rawName + "&rvstart=" + date + "T23%3A59%3A59.000Z"
+    )
+  } catch (error) {
+    console.error("Error fetching data:", error)
+  }
+
+  const data = response.json()
+
+  // Parse JSON response and extract the revid
+  const revId = data.query.pages[0].revisions[0].revid
+  // Open corresponding revision page in current tab
+  const oldPageUrl = MEDIAWIKI_API_ENDPOINT + "&oldid=" + revId
+  chrome.tabs.update({ url: oldPageUrl })
+}
+
+
 document.addEventListener("DOMContentLoaded", () => {
   // Get currently open tab
-  browser.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
     var currentUrl = tabs[0].url
     var wikipediaPageRawName = ""
     // Check if the current page is a Wikipedia page
     if (isWikipediaArticle(currentUrl)) {
       console.log("Current tab is a Wikipedia article.")
       document.getElementById("placeholder-message").style.display = "none"
-      wikipediaPageRawName = extractWikipediaArticleRawName(currentUrl)
-      displayWikipediaArticleName(wikipediaPageRawName)
+      wikipediaPageRawName = await extractWikipediaArticleRawName(currentUrl)
+      displayWikipediaArticleData(wikipediaPageRawName)
     } else {
       console.log("Current tab is not a Wikipedia article.")
       document.getElementById("form-body").style.display = "none"
@@ -79,17 +107,10 @@ document.addEventListener("DOMContentLoaded", () => {
   })
 })
 
-async function openArticleinSelectedDate(rawName, date) {
-  fetch(
-    MEDIAWIKI_API_GET_REVISION + "&titles=" + rawName + "&rvstart=" + date + "T23%3A59%3A59.000Z"
-  )
-    .then((response) => response.json())
-    .then((data) => {
-      // Parse JSON response and extract the revid
-      const revId = data.query.pages[0].revisions[0].revid
-      // Open corresponding revision page in current tab
-      const oldPageUrl = MEDIAWIKI_API_ENDPOINT + "&oldid=" + revId
-      browser.tabs.update({ url: oldPageUrl })
-    })
-    .catch((error) => console.error("Error fetching data:", error))
+// module.exports is used when running the tests with Node 
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    isWikipediaArticle,
+    extractWikipediaArticleRawName,
+  };
 }
