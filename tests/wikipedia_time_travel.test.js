@@ -1,6 +1,7 @@
 const {
   isWikipediaPage,
   isSelectedDateValid,
+  getPageLanguage,
   getWikipediaPageName,
   getCreationDate
 } = require("../popup/wikipedia_time_travel")
@@ -70,6 +71,15 @@ describe("Function getWikipediaPageName() ", () => {
   })
 })
 
+
+// Tests for getPageLanguage()
+describe("Function getPageLanguage() ", () => {
+
+  test("returns the language code of the Wikipedia page", () => {
+    expect(getPageLanguage("https://en.wikipedia.org/wiki/Atlantic_Ocean")).toBe("en")
+  })
+})
+
 // Tests for getCreationDate()
 describe("Function getCreationDate() ", () => {
    
@@ -106,8 +116,6 @@ describe("Function getCreationDate() ", () => {
 
 // Tests for isSelectedDateValid()
 describe("Function isSelectedDateValid() ", () => {
-
-  
 
   test("returns true if the selected date is between input.min and current date", () => {
     const datePickerObj = {

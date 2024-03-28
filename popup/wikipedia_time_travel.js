@@ -1,10 +1,9 @@
-const MEDIAWIKI_API_ENDPOINT = "https://en.wikipedia.org/w/index.php?"
-const MEDIAWIKI_API_QUERY =
-  "https://en.wikipedia.org/w/api.php?action=query&prop=info&format=json&origin=*"
+const MEDIAWIKI_INDEX_ENDPOINT = ".wikipedia.org/w/index.php?"
+const MEDIAWIKI_API_QUERY = ".wikipedia.org/w/api.php?action=query&prop=info&format=json&origin=*"
 const MEDIAWIKI_API_GET_REVISION =
-  "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvlimit=1&rvprop=timestamp%7Cids&origin=*"
+  ".wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvlimit=1&rvprop=timestamp%7Cids&origin=*"
 const MEDIAWIKI_API_GET_FIRST_REVISION =
-  "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvlimit=1&rvprop=timestamp%7Cids&origin=*&rvdir=newer"
+  ".wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvlimit=1&rvprop=timestamp%7Cids&origin=*&rvdir=newer"
 
 /**
  * Check if the URL leads to an Wikipedia page (legacy revisions included)
@@ -19,6 +18,11 @@ function isWikipediaPage(url) {
   )
 }
 
+function getPageLanguage(url) {
+  const urlObj = new URL(url)
+  return urlObj.hostname.split(".")[0]
+}
+
 /**
  * Check if the selected date is valid (between the creation date and today)
  * @param {object} datePicker - HTML input of type="date"
@@ -29,7 +33,7 @@ function isSelectedDateValid(datePicker) {
   const selectedDate = new Date(datePicker.value).toISOString().split("T")[0]
   const creationDate = new Date(datePicker.min).toISOString().split("T")[0]
 
-  return (selectedDate >= creationDate && selectedDate <= today)? true : false
+  return selectedDate >= creationDate && selectedDate <= today ? true : false
 }
 
 /**
@@ -38,7 +42,6 @@ function isSelectedDateValid(datePicker) {
  * @returns {string} - Wikipedia page name
  */
 async function getWikipediaPageName(url) {
-
   // Regular Wikipedia article URL
   if (url.includes("wikipedia.org/wiki/")) {
     const pageRawName = url.split("/wiki/")[1].split("#")[0]
@@ -55,7 +58,13 @@ async function getWikipediaPageName(url) {
     }
     if (queryParams.has("oldid")) {
       // If title is not present in the URL, get the title using the MediaWiki API
-      const response = await fetch(MEDIAWIKI_API_QUERY + "&revids=" + queryParams.get("oldid"))
+      const response = await fetch(
+        "https://" +
+          getPageLanguage(url) +
+          MEDIAWIKI_API_QUERY +
+          "&revids=" +
+          queryParams.get("oldid")
+      )
       const data = await response.json()
       const pageId = Object.keys(data.query.pages)
       return data.query.pages[pageId].title
@@ -67,12 +76,17 @@ async function getWikipediaPageName(url) {
 /**
  * Get the creation date of a Wikipedia page, by calling the MediaWiki API.
  * @param {string} pageName - Page name
+ * @param {string} language - Language code of the Wikipedia page (e.g. "en", "es")
  * @returns {string} - Date in the format "YYYY-MM-DD"
  */
-async function getCreationDate(pageName) {
+async function getCreationDate(pageName, language) {
   try {
     var response = await fetch(
-      MEDIAWIKI_API_GET_FIRST_REVISION + "&titles=" + pageName.replace(/ /g, "_")
+      "https://" +
+        language +
+        MEDIAWIKI_API_GET_FIRST_REVISION +
+        "&titles=" +
+        pageName.replace(/ /g, "_")
     )
     var data = await response.json()
   } catch (error) {
@@ -86,10 +100,11 @@ async function getCreationDate(pageName) {
 /**
  * Display the article name and creation date on the popup
  * @param {string} pageName - Name of the Wikipedia page
+ * @param {string} language - Language code of the Wikipedia page (e.g. "en", "es")
  */
-async function displayWikipediaPageData(pageName) {
+async function displayWikipediaPageData(pageName, language) {
   // Get the creation date of the page
-  const creationDate = await getCreationDate(pageName)
+  const creationDate = await getCreationDate(pageName, language)
   const dateObj = new Date(creationDate)
   const dateFormatOptions = { day: "numeric", month: "long", year: "numeric" }
   const creationDateLongFormat = dateObj.toLocaleDateString("en-GB", dateFormatOptions)
@@ -108,12 +123,15 @@ async function displayWikipediaPageData(pageName) {
  * Redirect current tab to the Wikipedia page revision that was most recent in
  * at the end of the selected date.
  * @param {string} pageName - Name of the Wikipedia page
+ * * @param {string} language - Language code of the Wikipedia page (e.g. "en", "es")
  * @param {string} date - Date in the format "YYYY-MM-DD"
  */
-async function openPageInSelectedDate(pageName, date) {
+async function openPageInSelectedDate(pageName, language, date) {
   try {
     var response = await fetch(
-      MEDIAWIKI_API_GET_REVISION +
+      "https://" +
+        language +
+        MEDIAWIKI_API_GET_REVISION +
         "&titles=" +
         pageName.replace(/ /g, "_") +
         "&rvstart=" +
@@ -128,8 +146,7 @@ async function openPageInSelectedDate(pageName, date) {
   // Parse JSON response and extract the revid
   const revId = data.query.pages[0].revisions[0].revid
   // Open corresponding revision page in current tab
-  const oldPageUrl = MEDIAWIKI_API_ENDPOINT + "&oldid=" + revId
-
+  const oldPageUrl = "https://" + language + MEDIAWIKI_INDEX_ENDPOINT + "&oldid=" + revId
   chrome.tabs.update({ url: oldPageUrl })
 }
 
@@ -148,13 +165,15 @@ document.addEventListener("DOMContentLoaded", () => {
     var currentUrl = tabs[0].url
     // Raw page name is the article name in the URL format
     var wikipediaPageName = ""
+    var wikipediaPageLanguage = ""
 
     // Check if the current page is a Wikipedia page, display page data and form if so
     if (isWikipediaPage(currentUrl)) {
       console.log("Current tab is a Wikipedia page.")
       document.getElementById("placeholder-message").style.display = "none"
       wikipediaPageName = await getWikipediaPageName(currentUrl)
-      displayWikipediaPageData(wikipediaPageName)
+      wikipediaPageLanguage = getPageLanguage(currentUrl)
+      displayWikipediaPageData(wikipediaPageName, wikipediaPageLanguage)
     } else {
       console.log("Current tab is not a Wikipedia page.")
       document.getElementById("form-body").style.display = "none"
@@ -169,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Open the revision when the submit button is clicked
     submitButton.addEventListener("click", async () => {
       const inputDate = document.getElementById("date-picker").value
-      await openPageInSelectedDate(wikipediaPageName, inputDate)
+      await openPageInSelectedDate(wikipediaPageName, wikipediaPageLanguage, inputDate)
     })
   })
 })
@@ -179,6 +198,7 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     isWikipediaPage,
     isSelectedDateValid,
+    getPageLanguage,
     getWikipediaPageName,
     getCreationDate,
   }
