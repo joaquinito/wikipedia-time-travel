@@ -1,4 +1,4 @@
-name: Run Tests
+name: Push Workflow
 
 on: [push]
 
@@ -18,5 +18,5 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Run tests
+    - name: Run unit tests
       run: npm test

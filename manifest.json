@@ -6,13 +6,13 @@
   "description": "Check how a Wikipedia page was like in the past.",
 
   "icons": {
-    "48": "wtt_icon2.png"
+    "48": "icons/wtt_icon2.png"
   },
 
   "action": {
     "default_popup": "popup/wikipedia_time_travel.html",
     "default_icon": {
-      "48": "wtt_icon2.png"
+      "48": "icons/wtt_icon2.png"
     }
   },
 
