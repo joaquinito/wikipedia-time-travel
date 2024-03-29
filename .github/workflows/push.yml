@@ -20,3 +20,12 @@ jobs:
 
     - name: Run unit tests
       run: npm test
+
+    - name: Run zip_extension.sh
+      run: sh scripts/zip_extension.sh
+
+    - name: Upload project zip file
+      uses: actions/upload-artifact@v2
+      with:
+        name: wikipedia_time_travel
+        path: wikipedia_time_travel_*.zip
