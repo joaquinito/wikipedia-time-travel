@@ -1,6 +1,6 @@
 {
   "name": "wikipedia-time-travel",
-  "version": "0.2.0",
+  "version": "0.1.1",
   "description": "Browser extension to get the state of a Wikipedia article in a past date.",
   "author": "Ricardo Joaquinito",
   "license": "MIT License",
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "web-ext build --overwrite-dest ",
-    "test": "jest --testEnvironment=jsdom tests/wikipedia_time_travel.test.js",
+    "test": "jest --testEnvironment=jsdom tests/unit",
     "e2e": "jest --preset=jest-puppeteer tests/e2e"
   },
   "devDependencies": {

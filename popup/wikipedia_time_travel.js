@@ -191,7 +191,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* After the user selects a date in the date picker, enable the submit button 
-  if the date is between page creation date and current date*/
+  if the date is between page creation date and current date */
   datePicker.addEventListener("input", () => {
     submitButton.disabled = datePicker.value && isSelectedDateValid(datePicker) ? false : true
   })
