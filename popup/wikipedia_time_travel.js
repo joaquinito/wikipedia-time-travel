@@ -5,6 +5,20 @@ const MEDIAWIKI_API_GET_REVISION =
 const MEDIAWIKI_API_GET_FIRST_REVISION =
   ".wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvlimit=1&rvprop=timestamp%7Cids&origin=*&rvdir=newer"
 
+
+/**
+ * Get the URL of the currently active tab
+ * @returns {string} - URL of the currently active tab
+ */
+function getCurrentTabUrl() {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const currentTab = tabs[0]
+      resolve(currentTab.url)
+    })
+  })
+}
+
 /**
  * Check if the URL leads to an Wikipedia page (legacy revisions included)
  * @param {string} url - URL to check
@@ -18,6 +32,11 @@ function isWikipediaPage(url) {
   )
 }
 
+/**
+ * Get the language code of the Wikipedia page
+ * @param {string} url - URL of the page
+ * @returns {string} - Language code of the Wikipedia page (e.g. "en", "es")
+ * */
 function getPageLanguage(url) {
   const urlObj = new URL(url)
   return urlObj.hostname.split(".")[0]
@@ -150,16 +169,6 @@ async function openPageInSelectedDate(pageName, language, date) {
   chrome.tabs.update({ url: oldPageUrl })
 }
 
-
-function getCurrentTabUrl() {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const currentTab = tabs[0]
-      resolve(currentTab.url)
-    })
-  })
-}
-
 /**
  * Main function - runs when the popup is opened
  */
@@ -170,9 +179,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Submit button is disabled by default
   submitButton.disabled = true
 
+  // If end-to-end tests are running, use the test URL provided in the query string
   const URL_PARAMS = new URLSearchParams(window.location.search)
   const testParam = URL_PARAMS.get("testUrl")
 
+  // Get the URL of the current tab (or use the test URL if provided)
   const currentUrl = (testParam === null ? await getCurrentTabUrl() : testParam)
 
   var wikipediaPageName = ""
