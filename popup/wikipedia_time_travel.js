@@ -150,46 +150,56 @@ async function openPageInSelectedDate(pageName, language, date) {
   chrome.tabs.update({ url: oldPageUrl })
 }
 
+
+function getCurrentTabUrl() {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const currentTab = tabs[0]
+      resolve(currentTab.url)
+    })
+  })
+}
+
 /**
  * Main function - runs when the popup is opened
  */
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const submitButton = document.getElementById("submit-button")
   const datePicker = document.getElementById("date-picker")
 
   // Submit button is disabled by default
   submitButton.disabled = true
 
-  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-    // Get currently open tab
-    var currentUrl = tabs[0].url
-    // Raw page name is the article name in the URL format
-    var wikipediaPageName = ""
-    var wikipediaPageLanguage = ""
+  const URL_PARAMS = new URLSearchParams(window.location.search)
+  const testParam = URL_PARAMS.get("testUrl")
 
-    // Check if the current page is a Wikipedia page, display page data and form if so
-    if (isWikipediaPage(currentUrl)) {
-      console.log("Current tab is a Wikipedia page.")
-      document.getElementById("placeholder-message").style.display = "none"
-      wikipediaPageName = await getWikipediaPageName(currentUrl)
-      wikipediaPageLanguage = getPageLanguage(currentUrl)
-      displayWikipediaPageData(wikipediaPageName, wikipediaPageLanguage)
-    } else {
-      console.log("Current tab is not a Wikipedia page.")
-      document.getElementById("form-body").style.display = "none"
-    }
+  const currentUrl = (testParam === null ? await getCurrentTabUrl() : testParam)
 
-    /* After the user selects a date in the date picker, enable the submit button 
-    if the date is between page creation date and current date*/
-    datePicker.addEventListener("input", () => {
-      submitButton.disabled = datePicker.value && isSelectedDateValid(datePicker) ? false : true
-    })
+  var wikipediaPageName = ""
+  var wikipediaPageLanguage = ""
 
-    // Open the revision when the submit button is clicked
-    submitButton.addEventListener("click", async () => {
-      const inputDate = document.getElementById("date-picker").value
-      await openPageInSelectedDate(wikipediaPageName, wikipediaPageLanguage, inputDate)
-    })
+  // Check if the current page is a Wikipedia page, display page data and form if so
+  if (isWikipediaPage(currentUrl)) {
+    console.log("Current tab is a Wikipedia page.")
+    document.getElementById("placeholder-message").style.display = "none"
+    wikipediaPageName = await getWikipediaPageName(currentUrl)
+    wikipediaPageLanguage = getPageLanguage(currentUrl)
+    displayWikipediaPageData(wikipediaPageName, wikipediaPageLanguage)
+  } else {
+    console.log("Current tab is not a Wikipedia page.")
+    document.getElementById("form-body").style.display = "none"
+  }
+
+  /* After the user selects a date in the date picker, enable the submit button 
+  if the date is between page creation date and current date*/
+  datePicker.addEventListener("input", () => {
+    submitButton.disabled = datePicker.value && isSelectedDateValid(datePicker) ? false : true
+  })
+
+  // Open the revision when the submit button is clicked
+  submitButton.addEventListener("click", async () => {
+    const inputDate = document.getElementById("date-picker").value
+    await openPageInSelectedDate(wikipediaPageName, wikipediaPageLanguage, inputDate)
   })
 })
 
