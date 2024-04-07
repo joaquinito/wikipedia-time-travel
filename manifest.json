@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Wikipedia Time Travel",
-  "version": "0.1",
+  "version": "0.2",
   "author": "Ricardo Joaquinito",
   "description": "Check how a Wikipedia page was like in the past.",
 
