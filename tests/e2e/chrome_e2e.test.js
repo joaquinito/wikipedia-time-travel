@@ -18,10 +18,20 @@ describe("Chrome Extension Popup Test", () => {
   /* Setup and teardown */
 
   beforeEach(async () => {
+    const isCI = process.env.CI === "true"
+
     browser = await puppeteer.launch({
-      headless: false,
-      args: ["--disable-extensions-except=.", "--load-extension=popup/"],
+      headless: isCI, // run in headless mode on CI, don't run in headless mode on local
+      args: isCI
+        ? [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-extensions-except=.",
+            "--load-extension=popup/",
+          ]
+        : ["--disable-extensions-except=.", "--load-extension=popup/"],
     })
+
     wikipediaPage = await browser.newPage()
     await wikipediaPage.goto(WIKIPEDIA_PAGE_EARTH)
 
@@ -43,7 +53,6 @@ describe("Chrome Extension Popup Test", () => {
   /* Tests start here */
 
   describe("For the URL https://en.wikipedia.org/wiki/Earth", () => {
-
     test('popup should have the article name "Earth"', async () => {
       //Expect the <div id="article-name"> to be "Earth"
       let articleName = ""
@@ -63,37 +72,30 @@ describe("Chrome Extension Popup Test", () => {
       } while (articleCreationDateText === "")
       expect(articleCreationDateText).toBe("Page created on 6 November 2001")
     })
-
   })
 
   describe("For a URL that is not a Wikipedia page", () => {
-
     test('popup should show only the text "This is not a Wikipedia page"', async () => {
       await extensionPage.goto(
-        "chrome-extension://" + EXTENSIONID +
+        "chrome-extension://" +
+          EXTENSIONID +
           "/popup/wikipedia_time_travel.html?testUrl=https://google.com"
       )
-      
+
       const placeholderMessageDisplayStyle = await extensionPage.$eval(
         "#placeholder-message",
         (el) => el.style.display
       )
 
-      const articleNameText = await extensionPage.$eval(
-        "#article-name",
-        (el) => el.innerText
-      )
+      const articleNameText = await extensionPage.$eval("#article-name", (el) => el.innerText)
 
       const articleCreationDateText = await extensionPage.$eval(
         "#article-creation-date",
         (el) => el.innerText
       )
 
-      const formBodyDisplayStyle = await extensionPage.$eval(
-        "#form-body",
-        (el) => el.style.display
-      )
-      
+      const formBodyDisplayStyle = await extensionPage.$eval("#form-body", (el) => el.style.display)
+
       expect(placeholderMessageDisplayStyle).not.toBe("none")
       expect(articleNameText).toBe("")
       expect(articleCreationDateText).toBe("")
