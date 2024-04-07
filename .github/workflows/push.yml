@@ -21,6 +21,9 @@ jobs:
     - name: Run unit tests
       run: npm test
 
+    - name: Run automated end-to-end tests
+      run: npm run e2e
+
     - name: Run zip_extension.sh
       run: sh scripts/zip_extension.sh
 
