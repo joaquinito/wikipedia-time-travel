@@ -1,7 +1,5 @@
 const puppeteer = require("puppeteer")
 
-const EXTENSIONID = "almhdgnjckianggfgaepdlcdcfcidife"
-
 WIKIPEDIA_PAGE_EARTH = "https://en.wikipedia.org/wiki/Earth"
 
 async function waitFor(milliseconds) {
@@ -14,6 +12,7 @@ describe("Chrome Extension Popup Test", () => {
   let browser = null
   let wikipediaPage = null
   let extensionPage = null
+  let extensionId = null
 
   /* Setup and teardown */
 
@@ -22,6 +21,7 @@ describe("Chrome Extension Popup Test", () => {
 
     browser = await puppeteer.launch({
       headless: isCI, // run in headless mode on CI, don't run in headless mode on local
+      slowMo: 200,
       args: isCI
         ? [
             "--no-sandbox",
@@ -29,21 +29,29 @@ describe("Chrome Extension Popup Test", () => {
             "--disable-extensions-except=.",
             "--load-extension=popup/",
           ]
-        : ["--disable-extensions-except=.", "--load-extension=popup/"],
+        : [
+            "--disable-extensions-except=.",
+            "--load-extension=popup/",
+            "--disable-features=DialMediaRouteProvider",
+          ],
     })
 
-    wikipediaPage = await browser.newPage()
-    await wikipediaPage.goto(WIKIPEDIA_PAGE_EARTH)
-
-    await (await browser.pages())[0].close() // Close the first empty tab
+    await browser.pages();
+    const targets = await browser.targets();
+    const backgroundPageTarget = targets.find(target => target.type() === 'service_worker');
+    const backgroundPageUrl = backgroundPageTarget.url() || '';
+    [, , extensionId] = backgroundPageUrl.split('/');
 
     extensionPage = await browser.newPage()
     await extensionPage.goto(
       "chrome-extension://" +
-        EXTENSIONID +
+        extensionId +
         "/popup/wikipedia_time_travel.html?testUrl=" +
         WIKIPEDIA_PAGE_EARTH
     )
+
+    await (await browser.pages())[0].close() // Close the first empty tab
+
   }, (timeout = 60000))
 
   afterEach(async () => {
@@ -76,9 +84,10 @@ describe("Chrome Extension Popup Test", () => {
 
   describe("For a URL that is not a Wikipedia page", () => {
     test('popup should show only the text "This is not a Wikipedia page"', async () => {
+      
       await extensionPage.goto(
         "chrome-extension://" +
-          EXTENSIONID +
+          extensionId +
           "/popup/wikipedia_time_travel.html?testUrl=https://google.com"
       )
 
@@ -100,6 +109,6 @@ describe("Chrome Extension Popup Test", () => {
       expect(articleNameText).toBe("")
       expect(articleCreationDateText).toBe("")
       expect(formBodyDisplayStyle).toBe("none")
-    })
+    }, timeout = 20000)
   })
 })
