@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Wikipedia Time Travel",
-  "version": "0.1",
+  "version": "0.1.1",
   "author": "Ricardo Joaquinito",
   "description": "Check how a Wikipedia page was like in the past.",
 
@@ -14,6 +14,10 @@
     "default_icon": {
       "48": "icons/wtt_icon2.png"
     }
+  },
+
+  "background": {
+    "service_worker": "background.js"
   },
 
   "permissions": [

@@ -1,7 +1,7 @@
 {
   "name": "wikipedia-time-travel",
-  "version": "0.1.0",
-  "description": "Firefox extension to get the state of a Wikipedia article in a past date.",
+  "version": "0.1.1",
+  "description": "Browser extension to get the state of a Wikipedia article in a past date.",
   "author": "Ricardo Joaquinito",
   "license": "MIT License",
   "directories": {
@@ -9,14 +9,17 @@
   },
   "scripts": {
     "build": "web-ext build --overwrite-dest ",
-    "test": "jest"
+    "test": "jest --testEnvironment=jsdom tests/unit",
+    "e2e": "jest --preset=jest-puppeteer tests/e2e"
   },
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "jest-fetch-mock": "^3.0.3",
+    "jest-puppeteer": "^10.0.1",
     "jsdom": "^24.0.0",
     "node-fetch": "^3.3.2",
-    "web-ext": "^7.11.0"
+    "puppeteer": "^22.6.3",
+    "web-ext": "^7.2.0"
   }
 }

@@ -4,7 +4,7 @@ const {
   getPageLanguage,
   getWikipediaPageName,
   getCreationDate
-} = require("../popup/wikipedia_time_travel")
+} = require("../../popup/wikipedia_time_travel")
 
 const fetchMock = require('jest-fetch-mock');
 fetchMock.enableMocks();
