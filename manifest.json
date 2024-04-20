@@ -3,16 +3,16 @@
   "name": "Wikipedia Time Travel",
   "version": "0.2",
   "author": "Ricardo Joaquinito",
-  "description": "Check how a Wikipedia page was like in the past.",
+  "description": "See how Wikipedia pages evolved over time.",
 
   "icons": {
-    "48": "icons/wtt_icon2.png"
+    "48": "img/icons/wtt_icon.png"
   },
 
   "action": {
     "default_popup": "popup/wikipedia_time_travel.html",
     "default_icon": {
-      "48": "icons/wtt_icon2.png"
+      "48": "img/icons/wtt_icon.png"
     }
   },
 

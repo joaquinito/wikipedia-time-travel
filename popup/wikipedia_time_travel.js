@@ -134,6 +134,7 @@ async function displayWikipediaPageData(pageName, language) {
   
   // Get the browser language, display the date according to the locale
   const browserLanguage = navigator.language
+  console.log("Browser language: " + browserLanguage)
   if (englishLocaleCodes.includes(browserLanguage)) {
     creationDateLongFormat = dateObj.toLocaleDateString(browserLanguage, dateFormatOptions)
   } else {
