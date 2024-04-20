@@ -8,15 +8,18 @@
 <body>
   <h2 id="extension-title">Wikipedia Time Travel</h2>
   <hr class="solid">
-  <div id="placeholder-message">Open a Wikipedia article to use this extension.</div>
-  <div id="article-info"> 
-    <div id="article-name"></div>
-    <div id="article-creation-date"></div>
-  </div>
-  <div id="form-body">
-    Open this page on
-    <input type="date" id="date-picker">
-    <button id="submit-button">Go</button>
+  <div class="lds-ellipsis" id="loader"><div></div><div></div><div></div><div></div></div>
+  <div id="loaded-content">
+    <div id="placeholder-message" hidden>Open a Wikipedia page to use this extension.</div>
+    <div id="article-info"> 
+      <div id="article-name"></div>
+      <div id="article-creation-date"></div>
+    </div>
+    <div id="form-body" hidden>
+      Open this page on
+      <input type="date" id="date-picker">
+      <button id="submit-button">Go</button>
+    </div>
   </div>
 </body>
 </html>

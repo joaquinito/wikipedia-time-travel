@@ -66,7 +66,7 @@ async function getWikipediaPageName(url) {
     const pageRawName = url.split("/wiki/")[1].split("#")[0]
     return decodeURIComponent(pageRawName).replace(/_/g, " ")
   }
-  // Paraterized Wikipedia article URL
+  // Parameterized Wikipedia article URL
   if (url.includes("wikipedia.org/w/index.php")) {
     const parsedUrl = new URL(url)
     const queryParams = new URLSearchParams(parsedUrl.search)
@@ -122,20 +122,36 @@ async function getCreationDate(pageName, language) {
  * @param {string} language - Language code of the Wikipedia page (e.g. "en", "es")
  */
 async function displayWikipediaPageData(pageName, language) {
+
+  const dateFormatOptions = { day: "numeric", month: "long", year: "numeric" }
+  const englishLocaleCodes = ["en", "en-AU", "en-BZ", "en-CA", "en-GB", "en-HK", "en-IN", 
+                              "en-IE", "en-MY", "en-NZ", "en-SG",  "en-UK", "en-US", "en-ZA"]
+  var creationDateLongFormat = null
+
   // Get the creation date of the page
   const creationDate = await getCreationDate(pageName, language)
   const dateObj = new Date(creationDate)
-  const dateFormatOptions = { day: "numeric", month: "long", year: "numeric" }
-  const creationDateLongFormat = dateObj.toLocaleDateString("en-GB", dateFormatOptions)
+  
+  // Get the browser language, display the date according to the locale
+  const browserLanguage = navigator.language
+  console.log("Browser language: " + browserLanguage)
+  if (englishLocaleCodes.includes(browserLanguage)) {
+    creationDateLongFormat = dateObj.toLocaleDateString(browserLanguage, dateFormatOptions)
+  } else {
+    creationDateLongFormat = dateObj.toLocaleDateString("en-GB", dateFormatOptions)
+  }
 
   //Update min and max date for the date picker
   document.getElementById("date-picker").min = creationDate
   document.getElementById("date-picker").max = new Date().toISOString().split("T")[0]
 
-  // Display the article name and creation date
+  // Display the article name, creation date and form
   document.getElementById("article-name").textContent = pageName
   document.getElementById("article-creation-date").textContent =
-    "Page created on " + creationDateLongFormat
+    "Page created on " + creationDateLongFormat  
+  document.getElementById("form-body").style.display = "block"
+  document.getElementById("loader").style.display = "none"
+  
 }
 
 /**
@@ -196,9 +212,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     wikipediaPageName = await getWikipediaPageName(currentUrl)
     wikipediaPageLanguage = getPageLanguage(currentUrl)
     displayWikipediaPageData(wikipediaPageName, wikipediaPageLanguage)
+    
   } else {
     console.log("Current tab is not a Wikipedia page.")
-    document.getElementById("form-body").style.display = "none"
+    document.getElementById("placeholder-message").style.display = "block"
+    document.getElementById("loader").style.display = "none"
   }
 
   /* After the user selects a date in the date picker, enable the submit button 

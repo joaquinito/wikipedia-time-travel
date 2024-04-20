@@ -8,10 +8,10 @@ jobs:
 
     steps:
     - name: Check out code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Use Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v4
       with:
         node-version: '21'
 
@@ -29,13 +29,14 @@ jobs:
 
     - name: Get extension version from manifest
       id: get_version
-      run: echo "::set-output name=VERSION::$(jq -r .version manifest.json)"
+      run: echo "VERSION=$(jq -r .version manifest.json)" >> $GITHUB_OUTPUT
 
     - name: Upload project zip folder
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: wikipedia_time_travel_${{steps.get_version.outputs.VERSION}}
         path: | 
-          manifest.json 
+          manifest.json
+          background.js 
           popup/ 
-          icons/ 
+          img/icons/ 
