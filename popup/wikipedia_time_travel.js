@@ -66,7 +66,7 @@ async function getWikipediaPageName(url) {
     const pageRawName = url.split("/wiki/")[1].split("#")[0]
     return decodeURIComponent(pageRawName).replace(/_/g, " ")
   }
-  // Paraterized Wikipedia article URL
+  // Parameterized Wikipedia article URL
   if (url.includes("wikipedia.org/w/index.php")) {
     const parsedUrl = new URL(url)
     const queryParams = new URLSearchParams(parsedUrl.search)
@@ -214,6 +214,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     
   } else {
     console.log("Current tab is not a Wikipedia page.")
+    document.getElementById("placeholder-message").style.display = "block"
     document.getElementById("loader").style.display = "none"
   }
 

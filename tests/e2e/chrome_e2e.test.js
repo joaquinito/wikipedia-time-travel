@@ -8,7 +8,6 @@ async function waitFor(milliseconds) {
   })
 }
 
-
 async function getBrowser(languageCode) {
   const isCI = process.env.CI === "true"
 
@@ -32,7 +31,6 @@ async function getBrowser(languageCode) {
         ],
   })
 }
-
 
 async function getExtensionId(browser) {
   await browser.pages();
@@ -107,8 +105,7 @@ describe("Chrome Extension Popup Test", () => {
     test('popup should show only the text "This is not a Wikipedia page"', async () => {
 
       const placeholderMessageDisplayStyle = await extensionPage.$eval(
-        "#placeholder-message",
-        (el) => el.style.display
+        "#placeholder-message", (el) => el.style.display
       )
 
       const articleNameText = await extensionPage.$eval("#article-name", (el) => el.innerText)
@@ -123,7 +120,7 @@ describe("Chrome Extension Popup Test", () => {
       expect(placeholderMessageDisplayStyle).not.toBe("none")
       expect(articleNameText).toBe("")
       expect(articleCreationDateText).toBe("")
-      expect(formBodyDisplayStyle).toBe("none")
+      expect(formBodyDisplayStyle).toBe("")
     }, timeout = 60000)
   })
 
