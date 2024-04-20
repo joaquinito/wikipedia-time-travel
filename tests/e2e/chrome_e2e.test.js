@@ -8,40 +8,51 @@ async function waitFor(milliseconds) {
   })
 }
 
+
+async function getBrowser(languageCode) {
+  const isCI = process.env.CI === "true"
+
+  // Set language
+  process.env.LANG = `${languageCode}.UTF-8`
+
+  return await puppeteer.launch({
+    headless: isCI, // run in headless mode on CI, don't run in headless mode on local
+    slowMo: 200,
+    args: isCI
+      ? [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-extensions-except=.",
+          "--load-extension=popup/",
+        ]
+      : [
+          "--disable-extensions-except=.",
+          "--load-extension=popup/",
+          "--disable-features=DialMediaRouteProvider",
+        ],
+  })
+}
+
+
+async function getExtensionId(browser) {
+  await browser.pages();
+  const targets = await browser.targets();
+  const backgroundPageTarget = targets.find(target => target.type() === 'service_worker');
+  const backgroundPageUrl = backgroundPageTarget.url() || '';
+  [, , extensionId] = backgroundPageUrl.split('/');
+  return extensionId
+}
+
 describe("Chrome Extension Popup Test", () => {
   let browser = null
-  let wikipediaPage = null
   let extensionPage = null
   let extensionId = null
 
   /* Setup and teardown */
 
   beforeEach(async () => {
-    const isCI = process.env.CI === "true"
-
-    browser = await puppeteer.launch({
-      headless: isCI, // run in headless mode on CI, don't run in headless mode on local
-      slowMo: 200,
-      args: isCI
-        ? [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-extensions-except=.",
-            "--load-extension=popup/",
-          ]
-        : [
-            "--disable-extensions-except=.",
-            "--load-extension=popup/",
-            "--disable-features=DialMediaRouteProvider",
-          ],
-    })
-
-    await browser.pages();
-    const targets = await browser.targets();
-    const backgroundPageTarget = targets.find(target => target.type() === 'service_worker');
-    const backgroundPageUrl = backgroundPageTarget.url() || '';
-    [, , extensionId] = backgroundPageUrl.split('/');
-
+    browser = await getBrowser("en-US")
+    extensionId = await getExtensionId(browser)
     extensionPage = await browser.newPage()
     await extensionPage.goto(
       "chrome-extension://" +
@@ -49,9 +60,7 @@ describe("Chrome Extension Popup Test", () => {
         "/popup/wikipedia_time_travel.html?testUrl=" +
         WIKIPEDIA_PAGE_EARTH
     )
-
     await (await browser.pages())[0].close() // Close the first empty tab
-
   }, (timeout = 60000))
 
   afterEach(async () => {
@@ -62,7 +71,6 @@ describe("Chrome Extension Popup Test", () => {
 
   describe("For the URL https://en.wikipedia.org/wiki/Earth", () => {
     test('popup should have the article name "Earth"', async () => {
-      //Expect the <div id="article-name"> to be "Earth"
       let articleName = ""
       do {
         articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
@@ -70,7 +78,7 @@ describe("Chrome Extension Popup Test", () => {
       expect(articleName).toBe("Earth")
     })
 
-    test('popup should show the text "Page created on 6 November 2001"', async () => {
+    test('popup should show the text "Page created on November 6, 2001"', async () => {
       let articleCreationDateText = ""
       do {
         articleCreationDateText = await extensionPage.$eval(
@@ -78,7 +86,7 @@ describe("Chrome Extension Popup Test", () => {
           (el) => el.innerText
         )
       } while (articleCreationDateText === "")
-      expect(articleCreationDateText).toBe("Page created on 6 November 2001")
+      expect(articleCreationDateText).toBe("Page created on November 6, 2001")
     })
   })
 
@@ -112,3 +120,5 @@ describe("Chrome Extension Popup Test", () => {
     }, timeout = 20000)
   })
 })
+
+

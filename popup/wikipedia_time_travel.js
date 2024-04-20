@@ -122,11 +122,23 @@ async function getCreationDate(pageName, language) {
  * @param {string} language - Language code of the Wikipedia page (e.g. "en", "es")
  */
 async function displayWikipediaPageData(pageName, language) {
+
+  const dateFormatOptions = { day: "numeric", month: "long", year: "numeric" }
+  const englishLocaleCodes = ["en", "en-AU", "en-BZ", "en-CA", "en-GB", "en-HK", "en-IN", 
+                              "en-IE", "en-MY", "en-NZ", "en-SG",  "en-UK", "en-US", "en-ZA"]
+  var creationDateLongFormat = null
+
   // Get the creation date of the page
   const creationDate = await getCreationDate(pageName, language)
   const dateObj = new Date(creationDate)
-  const dateFormatOptions = { day: "numeric", month: "long", year: "numeric" }
-  const creationDateLongFormat = dateObj.toLocaleDateString("en-GB", dateFormatOptions)
+  
+  // Get the browser language, display the date according to the locale
+  const browserLanguage = navigator.language
+  if (englishLocaleCodes.includes(browserLanguage)) {
+    creationDateLongFormat = dateObj.toLocaleDateString(browserLanguage, dateFormatOptions)
+  } else {
+    creationDateLongFormat = dateObj.toLocaleDateString("en-GB", dateFormatOptions)
+  }
 
   //Update min and max date for the date picker
   document.getElementById("date-picker").min = creationDate
@@ -188,6 +200,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   var wikipediaPageName = ""
   var wikipediaPageLanguage = ""
+
+
+  // Get language
+  console.log(navigator.language)
 
   // Check if the current page is a Wikipedia page, display page data and form if so
   if (isWikipediaPage(currentUrl)) {
