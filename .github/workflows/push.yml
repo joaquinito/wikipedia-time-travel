@@ -39,4 +39,4 @@ jobs:
           manifest.json
           background.js 
           popup/ 
-          icons/ 
+          img/icons/ 
