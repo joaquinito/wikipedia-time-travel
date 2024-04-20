@@ -144,10 +144,13 @@ async function displayWikipediaPageData(pageName, language) {
   document.getElementById("date-picker").min = creationDate
   document.getElementById("date-picker").max = new Date().toISOString().split("T")[0]
 
-  // Display the article name and creation date
+  // Display the article name, creation date and form
   document.getElementById("article-name").textContent = pageName
   document.getElementById("article-creation-date").textContent =
-    "Page created on " + creationDateLongFormat
+    "Page created on " + creationDateLongFormat  
+  document.getElementById("form-body").style.display = "block"
+  document.getElementById("loader").style.display = "none"
+  
 }
 
 /**
@@ -201,10 +204,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   var wikipediaPageName = ""
   var wikipediaPageLanguage = ""
 
-
-  // Get language
-  console.log(navigator.language)
-
   // Check if the current page is a Wikipedia page, display page data and form if so
   if (isWikipediaPage(currentUrl)) {
     console.log("Current tab is a Wikipedia page.")
@@ -212,9 +211,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     wikipediaPageName = await getWikipediaPageName(currentUrl)
     wikipediaPageLanguage = getPageLanguage(currentUrl)
     displayWikipediaPageData(wikipediaPageName, wikipediaPageLanguage)
+    
   } else {
     console.log("Current tab is not a Wikipedia page.")
-    document.getElementById("form-body").style.display = "none"
+    document.getElementById("loader").style.display = "none"
   }
 
   /* After the user selects a date in the date picker, enable the submit button 
