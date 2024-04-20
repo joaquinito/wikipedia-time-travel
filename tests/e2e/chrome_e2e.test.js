@@ -48,28 +48,27 @@ describe("Chrome Extension Popup Test", () => {
   let extensionPage = null
   let extensionId = null
 
-  /* Setup and teardown */
-
-  beforeEach(async () => {
-    browser = await getBrowser("en-US")
-    extensionId = await getExtensionId(browser)
-    extensionPage = await browser.newPage()
-    await extensionPage.goto(
-      "chrome-extension://" +
-        extensionId +
-        "/popup/wikipedia_time_travel.html?testUrl=" +
-        WIKIPEDIA_PAGE_EARTH
-    )
-    await (await browser.pages())[0].close() // Close the first empty tab
-  }, (timeout = 60000))
-
+  /* Teardown */
   afterEach(async () => {
     await browser.close()
   })
 
-  /* Tests start here */
-
   describe("For the URL https://en.wikipedia.org/wiki/Earth", () => {
+
+    /* Setup */
+    beforeEach(async () => {
+      browser = await getBrowser("en-US")
+      extensionId = await getExtensionId(browser)
+      extensionPage = await browser.newPage()
+      await extensionPage.goto(
+        "chrome-extension://" +
+          extensionId +
+          "/popup/wikipedia_time_travel.html?testUrl=" +
+          WIKIPEDIA_PAGE_EARTH
+      )
+      await (await browser.pages())[0].close() // Close the first empty tab
+    }, (timeout = 60000))
+
     test('popup should have the article name "Earth"', async () => {
       let articleName = ""
       do {
@@ -91,13 +90,21 @@ describe("Chrome Extension Popup Test", () => {
   })
 
   describe("For a URL that is not a Wikipedia page", () => {
-    test('popup should show only the text "This is not a Wikipedia page"', async () => {
-      
+
+    /* Setup */
+    beforeEach(async () => {
+      browser = await getBrowser("en-US")
+      extensionId = await getExtensionId(browser)
+      extensionPage = await browser.newPage()
       await extensionPage.goto(
         "chrome-extension://" +
           extensionId +
           "/popup/wikipedia_time_travel.html?testUrl=https://google.com"
       )
+      await (await browser.pages())[0].close() // Close the first empty tab
+    }, (timeout = 60000))
+
+    test('popup should show only the text "This is not a Wikipedia page"', async () => {
 
       const placeholderMessageDisplayStyle = await extensionPage.$eval(
         "#placeholder-message",
@@ -117,8 +124,59 @@ describe("Chrome Extension Popup Test", () => {
       expect(articleNameText).toBe("")
       expect(articleCreationDateText).toBe("")
       expect(formBodyDisplayStyle).toBe("none")
-    }, timeout = 20000)
+    }, timeout = 60000)
+  })
+
+  describe("Date format of creation date is correct in a browser with the language ", () => {
+
+    async function openBrowserWithLanguage(languageCode) {
+      browser = await getBrowser(languageCode)
+      extensionId = await getExtensionId(browser)
+      extensionPage = await browser.newPage()
+      await extensionPage.goto(
+        "chrome-extension://" +
+          extensionId +
+          "/popup/wikipedia_time_travel.html?testUrl=" +
+          WIKIPEDIA_PAGE_EARTH
+      )
+      await (await browser.pages())[0].close() // Close the first empty tab
+    }
+
+    async function getArticleCreationDateText() {
+      let articleCreationDateText = ""
+      do {
+        articleCreationDateText = await extensionPage.$eval(
+          "#article-creation-date",
+          (el) => el.innerText
+        )
+      }
+      while (articleCreationDateText === "")
+      return articleCreationDateText
+    }
+
+    test('en', async () => {
+      await openBrowserWithLanguage("en")
+      const articleCreationDateText = await getArticleCreationDateText()
+      expect(articleCreationDateText).toBe("Page created on November 6, 2001")
+    }, timeout = 60000)
+
+    test('en-US', async () => {
+      await openBrowserWithLanguage("en-US")
+      const articleCreationDateText = await getArticleCreationDateText()
+      expect(articleCreationDateText).toBe("Page created on November 6, 2001")
+    }, timeout = 60000)
+
+    test('en-UK', async () => {
+      await openBrowserWithLanguage("en-UK")
+      const articleCreationDateText = await getArticleCreationDateText()
+      expect(articleCreationDateText).toBe("Page created on 6 November 2001")
+    }, timeout = 60000)
+
+    test('pt', async () => {
+      await openBrowserWithLanguage("en-UK")
+      const articleCreationDateText = await getArticleCreationDateText()
+      expect(articleCreationDateText).toBe("Page created on 6 November 2001")
+    }, timeout = 60000)
   })
 })
-
 
