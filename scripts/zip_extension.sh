@@ -7,5 +7,5 @@ echo Creating zip folder for WTT version $version
 version=$(echo $version | sed 's/\./_/g')
 
 # Zip all necessary files for the extension
-zip -r wikipedia_time_travel_$version.zip manifest.json background.js popup/ icons/ 
+zip -r wikipedia_time_travel_$version.zip manifest.json background.js popup/ shared/ content/ icons/ img/icons/ 
 

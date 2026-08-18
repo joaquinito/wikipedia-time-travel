@@ -2,9 +2,12 @@ const {
   isWikipediaPage,
   isSelectedDateValid,
   getPageLanguage,
+  getTodayIsoDate,
   getWikipediaPageName,
-  getCreationDate
-} = require("../../popup/wikipedia_time_travel")
+  getCreationDate,
+  getRevisionUrlForDate,
+  formatCreationDate
+} = require("../../shared/mediawiki")
 
 const fetchMock = require('jest-fetch-mock');
 fetchMock.enableMocks();
@@ -113,6 +116,70 @@ describe("Function getCreationDate() ", () => {
 
 })
 
+
+// Tests for getRevisionUrlForDate()
+describe("Function getRevisionUrlForDate() ", () => {
+
+  beforeEach(() => {
+    fetchMock.resetMocks();
+  });
+
+  test("returns the URL of the revision that was the most recent one on the given date", async () => {
+
+    fetchMock.mockResponseOnce(JSON.stringify({
+      "query": {
+        "pages": [
+          {
+            "pageid": 9228,
+            "ns": 0,
+            "title": "Earth",
+            "revisions": [
+              {
+                "revid": 602452976,
+                "parentid": 602358085,
+                "timestamp": "2014-04-02T16:33:26Z"
+              }
+            ]
+          }
+        ]
+      }
+    }));
+
+    expect(await getRevisionUrlForDate("Earth", "en", "2014-04-07")).toBe(
+      "https://en.wikipedia.org/w/index.php?&oldid=602452976"
+    )
+  })
+
+  test("replaces the spaces of the page name before calling the API", async () => {
+
+    fetchMock.mockResponseOnce(JSON.stringify({
+      "query": { "pages": [{ "revisions": [{ "revid": 1 }] }] }
+    }));
+
+    await getRevisionUrlForDate("Atlantic Ocean", "en", "2014-04-07")
+    expect(fetchMock.mock.calls[0][0]).toContain("&titles=Atlantic_Ocean")
+  })
+})
+
+// Tests for formatCreationDate()
+describe("Function formatCreationDate() ", () => {
+
+  test("returns the date in a long format", () => {
+    expect(formatCreationDate("2001-11-06")).toBe("November 6, 2001")
+  })
+})
+
+// Tests for getTodayIsoDate()
+describe("Function getTodayIsoDate() ", () => {
+
+  test("returns today's date in the format used by input[type=date]", () => {
+    expect(getTodayIsoDate()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  test("returns the same date as the one the browser reports", () => {
+    expect(getTodayIsoDate()).toBe(new Date().toISOString().split("T")[0])
+  })
+})
 
 // Tests for isSelectedDateValid()
 describe("Function isSelectedDateValid() ", () => {

@@ -1,0 +1,249 @@
+/* ==========================================================================
+   Wikipedia Time Travel — in-page widget
+
+   The widget sits in the page titlebar next to the language selector, so it
+   has to look like it belongs to the skin rather than to an extension. Colours
+   are read from Wikipedia's own Codex custom properties where they exist
+   (--color-base, --color-progressive, and friends), with the equivalent Codex
+   values hard-coded as fallbacks for skins and MediaWiki versions that do not
+   define them.
+
+   Every rule is scoped under .wtt-widget so nothing leaks into the article.
+   ========================================================================== */
+
+.wtt-widget {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  /* Fallbacks mirror Wikipedia's light theme */
+  --wtt-color:            var(--color-base, #202122);
+  --wtt-color-subtle:     var(--color-subtle, #54595d);
+  --wtt-color-accent:     var(--color-progressive, #3366cc);
+  --wtt-bg:               var(--background-color-base, #ffffff);
+  --wtt-bg-subtle:        var(--background-color-neutral-subtle, #f8f9fa);
+  --wtt-bg-hover:         rgba(0, 24, 73, 0.027);
+  --wtt-bg-active:        rgba(0, 24, 73, 0.082);
+  --wtt-border:           var(--border-color-base, #a2a9b1);
+  --wtt-border-subtle:    var(--border-color-subtle, #c8ccd1);
+  --wtt-disabled-bg:      var(--background-color-disabled, #dadde1);
+  --wtt-disabled-color:   var(--color-disabled, #72777d);
+  --wtt-shadow:           rgba(0, 0, 0, 0.1);
+}
+
+/* Wikipedia's night theme, and its "match the device" setting. color-scheme
+also darkens the date input's native calendar control and overlay. */
+html.skin-theme-clientpref-night .wtt-widget {
+  color-scheme: dark;
+  --wtt-bg-hover:       rgba(255, 255, 255, 0.06);
+  --wtt-bg-active:      rgba(255, 255, 255, 0.12);
+  --wtt-disabled-bg:    var(--background-color-disabled, #33373b);
+  --wtt-shadow:         rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  html.skin-theme-clientpref-os .wtt-widget {
+    color-scheme: dark;
+    --wtt-bg-hover:     rgba(255, 255, 255, 0.06);
+    --wtt-bg-active:    rgba(255, 255, 255, 0.12);
+    --wtt-disabled-bg:  var(--background-color-disabled, #33373b);
+    --wtt-shadow:       rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Button — matches the quiet Codex button used by the language selector
+   -------------------------------------------------------------------------- */
+
+.wtt-widget .wtt-widget__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  min-height: 32px;
+  padding: 5px 11px;
+  margin: 0;
+
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--wtt-color);
+
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: bold;
+  line-height: 1.4285714;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 100ms ease, border-color 100ms ease;
+}
+
+.wtt-widget .wtt-widget__button:hover {
+  background-color: var(--wtt-bg-hover);
+}
+
+.wtt-widget .wtt-widget__button:active {
+  background-color: var(--wtt-bg-active);
+  border-color: var(--wtt-border);
+}
+
+.wtt-widget .wtt-widget__button:focus-visible {
+  outline: 1px solid var(--wtt-color-accent);
+  outline-offset: 1px;
+}
+
+/* The language selector's icon is progressive blue; ours matches it */
+.wtt-widget .wtt-widget__button-icon {
+  flex: none;
+  color: var(--wtt-color-accent);
+}
+
+/* --------------------------------------------------------------------------
+   Panel — hangs below the button, aligned to its right edge so it stays
+   inside the content column
+   -------------------------------------------------------------------------- */
+
+.wtt-widget .wtt-widget__panel {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 100;
+
+  box-sizing: border-box;
+  width: 260px;
+  padding: 12px;
+
+  background-color: var(--wtt-bg);
+  border: 1px solid var(--wtt-border);
+  border-radius: 2px;
+  box-shadow: 0 2px 3px 1px var(--wtt-shadow);
+
+  color: var(--wtt-color);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.wtt-widget .wtt-widget__panel[hidden] {
+  display: none;
+}
+
+.wtt-widget .wtt-widget__status {
+  margin: 0;
+  color: var(--wtt-color-subtle);
+  font-size: 0.8125rem;
+}
+
+.wtt-widget .wtt-widget__status--error {
+  color: var(--color-destructive, #bf3c2c);
+}
+
+.wtt-widget .wtt-widget__form[hidden] {
+  display: none;
+}
+
+.wtt-widget .wtt-widget__meta {
+  margin: 0 0 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--wtt-border-subtle);
+  color: var(--wtt-color-subtle);
+  font-size: 0.8125rem;
+}
+
+.wtt-widget .wtt-widget__label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--wtt-color-subtle);
+  font-size: 0.8125rem;
+}
+
+.wtt-widget .wtt-widget__date {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 8px;
+  margin: 0;
+
+  background-color: var(--wtt-bg);
+  color: var(--wtt-color);
+  border: 1px solid var(--wtt-border);
+  border-radius: 2px;
+
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.4285714;
+}
+
+.wtt-widget .wtt-widget__date:focus {
+  outline: none;
+  border-color: var(--wtt-color-accent);
+  box-shadow: inset 0 0 0 1px var(--wtt-color-accent);
+}
+
+.wtt-widget .wtt-widget__submit {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  width: 100%;
+  min-height: 32px;
+  margin: 10px 0 0;
+  padding: 5px 12px;
+
+  background-color: var(--wtt-color-accent);
+  border: 1px solid var(--wtt-color-accent);
+  border-radius: 2px;
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: bold;
+  line-height: 1.4285714;
+  cursor: pointer;
+  transition: background-color 100ms ease, border-color 100ms ease;
+}
+
+.wtt-widget .wtt-widget__submit:hover:not(:disabled) {
+  background-color: var(--color-progressive--hover, #447ff5);
+  border-color: var(--color-progressive--hover, #447ff5);
+}
+
+.wtt-widget .wtt-widget__submit:active:not(:disabled) {
+  background-color: var(--color-progressive--active, #2a4b8d);
+  border-color: var(--color-progressive--active, #2a4b8d);
+}
+
+.wtt-widget .wtt-widget__submit:focus-visible {
+  outline: 1px solid var(--wtt-color-accent);
+  outline-offset: 1px;
+}
+
+.wtt-widget .wtt-widget__submit:disabled {
+  background-color: var(--wtt-disabled-bg);
+  border-color: var(--wtt-disabled-bg);
+  color: var(--wtt-disabled-color);
+  cursor: default;
+}
+
+/* --------------------------------------------------------------------------
+   Narrow viewports — Wikipedia stacks the titlebar, so pin the panel to the
+   widget's left edge instead to keep it on screen
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .wtt-widget .wtt-widget__panel {
+    right: auto;
+    left: 0;
+    width: min(260px, calc(100vw - 32px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wtt-widget .wtt-widget__button,
+  .wtt-widget .wtt-widget__submit {
+    transition: none;
+  }
+}

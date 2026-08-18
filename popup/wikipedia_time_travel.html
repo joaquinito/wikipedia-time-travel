@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <title>Wikipedia Time Travel</title>
   <link rel="stylesheet" type="text/css" href="wikipedia_time_travel.css">
+  <script src="../shared/mediawiki.js"></script>
+  <script src="../shared/settings.js"></script>
   <script src="wikipedia_time_travel.js"></script>
 </head>
 <body>
@@ -40,6 +42,8 @@
         <span class="placeholder-text">Open a Wikipedia page to use this extension.</span>
       </div>
 
+      <div id="error-message" hidden>Could not load this page's history.</div>
+
       <div id="article-info">
         <div id="article-name"></div>
         <div id="article-meta">
@@ -68,6 +72,16 @@
 
     </div>
   </main>
+
+  <footer id="settings">
+    <label id="in-page-widget-setting">
+      <input type="checkbox" id="in-page-widget-checkbox">
+      <span class="setting-text">
+        <span class="setting-name">Show on Wikipedia pages</span>
+        <span class="setting-hint">Adds a Time travel button next to the language menu.</span>
+      </span>
+    </label>
+  </footer>
 
 </body>
 </html>

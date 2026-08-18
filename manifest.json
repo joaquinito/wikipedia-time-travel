@@ -20,8 +20,27 @@
     "service_worker": "background.js"
   },
 
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.wikipedia.org/wiki/*",
+        "*://*.wikipedia.org/w/index.php*"
+      ],
+      "js": [
+        "shared/mediawiki.js",
+        "shared/settings.js",
+        "content/wikipedia_time_travel_page.js"
+      ],
+      "css": [
+        "content/wikipedia_time_travel_page.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage"
   ]
 
 }

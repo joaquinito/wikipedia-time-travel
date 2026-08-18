@@ -33,6 +33,9 @@
   --wtt-disabled-bg:     #dadde1;
   --wtt-disabled-text:   #72777d;
 
+  /* Error */
+  --wtt-destructive:     #bf3c2c;
+
   /* Loading skeleton */
   --wtt-skeleton:        #eaecf0;
   --wtt-skeleton-sheen:  #f8f9fa;
@@ -63,6 +66,8 @@
 
     --wtt-disabled-bg:     #33373b;
     --wtt-disabled-text:   #72777d;
+
+    --wtt-destructive:     #ff6e6e;
 
     --wtt-skeleton:        #27292d;
     --wtt-skeleton-sheen:  #33373b;
@@ -288,6 +293,59 @@ body {
 }
 
 /* --------------------------------------------------------------------------
+   Error state — shown when the MediaWiki API cannot be reached
+   -------------------------------------------------------------------------- */
+
+#error-message {
+  padding: 12px;
+  background-color: var(--wtt-bg-subtle);
+  border: 1px solid var(--wtt-border);
+  border-left: 3px solid var(--wtt-destructive);
+  border-radius: var(--wtt-radius);
+  color: var(--wtt-text-subtle);
+  font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   Settings — one quiet row under a hairline rule
+   -------------------------------------------------------------------------- */
+
+#settings {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--wtt-border);
+}
+
+#in-page-widget-setting {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  cursor: pointer;
+}
+
+#in-page-widget-checkbox {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 2px 0 0;
+  accent-color: var(--wtt-accent);
+  cursor: pointer;
+}
+
+.setting-name {
+  display: block;
+  font-size: 13px;
+}
+
+.setting-hint {
+  display: block;
+  margin-top: 1px;
+  color: var(--wtt-text-subtle);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
    Loading skeleton — mirrors the shape of the loaded content, so the popup
    does not jump when the MediaWiki response arrives
    -------------------------------------------------------------------------- */
@@ -332,7 +390,8 @@ body {
 
 .is-ready #article-info,
 .is-ready #form-body,
-.is-ready #placeholder-message {
+.is-ready #placeholder-message,
+.is-ready #error-message {
   animation: wtt-reveal 160ms ease-out both;
 }
 
@@ -346,6 +405,7 @@ body {
   .is-ready #article-info,
   .is-ready #form-body,
   .is-ready #placeholder-message,
+  .is-ready #error-message,
   .button-icon {
     animation: none;
     transition: none;
