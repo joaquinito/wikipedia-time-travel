@@ -14,7 +14,8 @@ Unfortunately, support for programmaticaly testing extension popups is still ver
 1. Open the page for Earth on Wikipedia: https://en.wikipedia.org/wiki/Earth.
 2. Open the Wikipedia Time Travel popup.
   
-    **Expected**: The popup shows for a brief moment the loading animation.
+    **Expected**: The popup shows for a brief moment the loading skeleton (three shimmering
+    placeholder blocks). The popup does not change height when the article data replaces it.
 
 ### Test 3: Select a date by using the date picker
 
@@ -42,4 +43,24 @@ Unfortunately, support for programmaticaly testing extension popups is still ver
    
     **Expected**: The Wikipedia page for Earth with ID 602452976 is displayed.
 
+### Test 6: The popup follows the browser colour scheme
 
+1. Set the operating system (or Chrome, in `chrome://settings/appearance`) to dark mode.
+2. Open the page for Earth on Wikipedia: https://en.wikipedia.org/wiki/Earth.
+3. Open the Wikipedia Time Travel popup.
+
+    **Expected**: The popup uses a dark background with light text, matching Wikipedia's own
+    dark mode. The date picker's calendar overlay is also dark.
+
+4. Switch back to light mode and reopen the popup.
+
+    **Expected**: The popup uses a white background with dark text.
+
+### Test 7: The empty state is shown outside Wikipedia
+
+1. Open any page that is not on `wikipedia.org`.
+2. Open the Wikipedia Time Travel popup.
+
+    **Expected**: The popup shows only the header and a bordered panel with a globe icon and the
+    message "Open a Wikipedia page to use this extension." No article name, date or `Go` button
+    is shown.

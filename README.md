@@ -8,6 +8,20 @@
 
 Wikipedia Time Travel is a browser extension that lets you check how the text and images of Wikipedia pages have changed over time. It gets the version of a Wikipedia page that was most recent at the end of any date of your choice. Additionally, it tells you when the page was created.
 
+## Screenshots
+
+The popup follows Wikipedia's own visual language — a serif wordmark over a hairline rule, the
+neutral grey scale and the progressive blue of the Vector 2022 skin — and follows the browser
+between light and dark mode.
+
+| Light | Dark |
+| --- | --- |
+| <img src="img/screenshots/popup_light.png" alt="Popup on a Wikipedia article, light mode" width="320"> | <img src="img/screenshots/popup_dark.png" alt="Popup on a Wikipedia article, dark mode" width="320"> |
+
+| Loading | Not a Wikipedia page |
+| --- | --- |
+| <img src="img/screenshots/popup_loading.png" alt="Popup while the article data is loading" width="320"> | <img src="img/screenshots/popup_no_wikipedia_page.png" alt="Popup on a page that is not a Wikipedia page" width="320"> |
+
 ## Installation on Google Chrome (unpacked extension)
 
 1. Clone this repository to your local machine.
