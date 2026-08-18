@@ -246,13 +246,25 @@ function mountWidgetWhenAnchorExists() {
     }
   })
   observer.observe(document.body, { childList: true, subtree: true })
-  setTimeout(() => observer.disconnect(), WTT_ANCHOR_TIMEOUT_MS)
+  setTimeout(() => {
+    observer.disconnect()
+    if (!document.getElementById(WTT_WIDGET_ID)) {
+      console.warn(
+        "Wikipedia Time Travel: could not find the page titlebar, so the in-page " +
+          "widget was not added. This skin may not be supported yet."
+      )
+    }
+  }, WTT_ANCHOR_TIMEOUT_MS)
 }
 
 /**
  * Entry point - runs when the content script is injected
  */
 ;(async () => {
+  /* Lets the popup know this tab already has the widget, so that switching the
+  setting on does not inject a second copy of these scripts. */
+  window.wttInPageWidgetLoaded = true
+
   if (!isWikipediaPage(window.location.href)) {
     return
   }

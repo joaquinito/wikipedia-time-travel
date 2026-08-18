@@ -66,16 +66,77 @@ async function openPageInSelectedDate(pageName, language, date) {
 }
 
 /**
+ * Add the in-page widget to the tab that is currently open, if it is a
+ * Wikipedia page that does not have it yet.
+ *
+ * Content scripts declared in the manifest are only injected into pages that
+ * are loaded after the extension is, so a tab that was already open when the
+ * extension was installed, updated or reloaded has no widget and no way of
+ * hearing about the setting being switched on. Injecting it here means the
+ * checkbox takes effect without the reader having to reload the article.
+ */
+async function addWidgetToCurrentTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab || !tab.id || !isWikipediaPage(tab.url || "")) {
+    return
+  }
+
+  const [{ result: alreadyRunning }] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => window.wttInPageWidgetLoaded === true,
+  })
+  if (alreadyRunning) {
+    return
+  }
+
+  await chrome.scripting.insertCSS({
+    target: { tabId: tab.id },
+    files: ["content/wikipedia_time_travel_page.css"],
+  })
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: [
+      "shared/mediawiki.js",
+      "shared/settings.js",
+      "content/wikipedia_time_travel_page.js",
+    ],
+  })
+}
+
+/**
  * Show the current value of the in-page widget setting, and store any change.
  */
 async function setUpSettings() {
   const checkbox = document.getElementById("in-page-widget-checkbox")
 
+  /* chrome.storage is only defined when the "storage" permission is granted.
+  If the extension is running an older manifest - which happens when the files
+  have changed on disk but the extension has not been reloaded - the checkbox
+  would silently store nothing, so say so instead. */
+  if (typeof chrome === "undefined" || !chrome.storage) {
+    console.error(
+      "Wikipedia Time Travel: chrome.storage is unavailable. " +
+        "Reload the extension in chrome://extensions to pick up the current manifest."
+    )
+    checkbox.disabled = true
+    document.getElementById("setting-hint").textContent =
+      "Unavailable. Reload the extension in chrome://extensions."
+    return
+  }
+
   const settings = await getSettings()
   checkbox.checked = settings[WTT_SETTING_IN_PAGE_WIDGET]
 
-  checkbox.addEventListener("change", () => {
-    setSetting(WTT_SETTING_IN_PAGE_WIDGET, checkbox.checked)
+  checkbox.addEventListener("change", async () => {
+    await setSetting(WTT_SETTING_IN_PAGE_WIDGET, checkbox.checked)
+
+    if (checkbox.checked) {
+      try {
+        await addWidgetToCurrentTab()
+      } catch (error) {
+        console.error("Wikipedia Time Travel: could not add the widget to this tab.", error)
+      }
+    }
   })
 }
 

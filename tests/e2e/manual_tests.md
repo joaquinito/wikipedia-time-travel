@@ -126,3 +126,27 @@ Unfortunately, support for programmaticaly testing extension popups is still ver
 
     **Expected**: The `Time travel` button is present and, once opened, shows the creation date of
     the Earth article. Picking another date opens the revision for that date.
+
+### Test 13: Turning the widget on reaches tabs that were already open
+
+1. Open the page for Earth on Wikipedia with `Show on Wikipedia pages` unticked.
+2. Leaving that tab open, open the popup and tick `Show on Wikipedia pages`.
+
+    **Expected**: The `Time travel` button appears in the article without reloading it.
+
+3. Close the popup, open it again and untick, then tick the checkbox once more.
+
+    **Expected**: The button disappears and reappears, and only one `Time travel` button is ever
+    present.
+
+### Test 14: The setting reports itself as unavailable on a stale extension
+
+This covers the case where the extension's files have changed on disk but the extension has not
+been reloaded, so Chrome is still running an older manifest without the `storage` permission.
+
+1. Load the extension, then remove `"storage"` from the `permissions` of `manifest.json` without
+   reloading the extension in `chrome://extensions`.
+2. Open the popup.
+
+    **Expected**: The `Show on Wikipedia pages` checkbox is disabled and the text below it reads
+    "Unavailable. Reload the extension in chrome://extensions." The rest of the popup still works.
