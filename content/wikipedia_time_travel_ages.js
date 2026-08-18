@@ -6,11 +6,13 @@ age is computed by the parser when the page is rendered. Viewing an old
 revision re-renders the old wikitext today, so every such age reads as the
 age now rather than the age when that revision was current.
 
-This script recomputes those ages against the revision's own timestamp. It
-only touches ages that are anchored to an hCard microformat date - the
-<span class="bday"> that the same templates emit - so it never has to guess at
-what a bare number in an article means. Each change is wrapped in a marker
-span, so a reader can see that the extension, and not the article, wrote it.
+This script recomputes those ages against the revision's own timestamp.
+
+It works from the age outwards: it finds the age text first, then looks up
+through its ancestors for the hCard microformat date - the <span class="bday">
+that the same templates emit - that the age was computed from. Doing it that
+way round means the two only have to share some ancestor, rather than sit in
+the exact arrangement one template happens to produce.
 
 Loaded as a content script together with shared/mediawiki.js and
 shared/settings.js.
@@ -18,13 +20,12 @@ shared/settings.js.
 
 const WTT_ADJUSTED_AGE_CLASS = "wtt-adjusted-age"
 
-/* How far up from the microformat date to look for the text holding the age.
-The templates put both inside the same infobox cell or list item. */
-const WTT_AGE_REGION_MAX_DEPTH = 4
-
 /* Only complete dates can be turned into an exact age. {{birth year and age}}
 emits just "1955", which would give a two year range rather than a number. */
 const WTT_COMPLETE_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/* Elements whose text is never article prose */
+const WTT_SKIPPED_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA"])
 
 /*
 The two shapes an age takes next to a microformat date on the English
@@ -36,14 +37,14 @@ fixed dates and so does not drift.
 const WTT_AGE_PATTERNS = [
   {
     // {{birth date and age}} -> "(age 70)"
-    pattern: /\(age([\s ]+)(\d+)\)/,
+    pattern: /\(age([\s ]+)(\d+)\)/,
     rebuild: (match, years) => "(age" + match[1] + years + ")",
   },
   {
     // {{start date and age}} -> "; 49 years ago"
-    pattern: /(\d+)([\s ]+)(years?)([\s ]+)ago/,
+    pattern: /(\d+)([\s ]+)years?([\s ]+)ago/,
     rebuild: (match, years) =>
-      years + match[2] + (years === 1 ? "year" : "years") + match[4] + "ago",
+      years + match[2] + (years === 1 ? "year" : "years") + match[3] + "ago",
   },
 ]
 
@@ -57,21 +58,84 @@ function getRevisionIdFromUrl(url) {
 }
 
 /**
- * Find the element that holds both a microformat date and the age next to it.
- * @param {HTMLElement} dateElement - The <span class="bday"> element
- * @returns {?HTMLElement} - The closest ancestor whose text contains an age
+ * Find every piece of text on the page that looks like a computed age.
+ * @param {HTMLElement} root - Element to search within
+ * @returns {Array<object>} - One entry per age found
  */
-function findAgeRegion(dateElement) {
-  let candidate = dateElement.parentElement
+function findAgesOnPage(root) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => {
+      const parent = node.parentElement
+      if (!parent || WTT_SKIPPED_TAGS.has(parent.tagName)) {
+        return NodeFilter.FILTER_REJECT
+      }
+      // Leave anything this script has already rewritten alone
+      if (parent.closest("." + WTT_ADJUSTED_AGE_CLASS)) {
+        return NodeFilter.FILTER_REJECT
+      }
+      return NodeFilter.FILTER_ACCEPT
+    },
+  })
 
-  for (let depth = 0; candidate && depth < WTT_AGE_REGION_MAX_DEPTH; depth++) {
-    if (WTT_AGE_PATTERNS.some(({ pattern }) => pattern.test(candidate.textContent))) {
-      return candidate
+  const found = []
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode
+    for (const { pattern, rebuild } of WTT_AGE_PATTERNS) {
+      const match = textNode.nodeValue.match(pattern)
+      if (match) {
+        found.push({ textNode, match, rebuild })
+        break
+      }
     }
-    candidate = candidate.parentElement
+  }
+
+  return found
+}
+
+/**
+ * Find the microformat date an age was computed from, by widening the search
+ * out from the age until an ancestor holds one.
+ * @param {Text} textNode - The text node holding the age
+ * @returns {?HTMLElement} - The date element, or null if there is none nearby
+ */
+function findDateForAge(textNode) {
+  let scope = textNode.parentElement
+
+  while (scope && scope !== document.body) {
+    const dates = scope.querySelectorAll(".bday, .dtstart")
+
+    if (dates.length > 0) {
+      /* An infobox can hold several dates, so use the last one that comes
+      before the age in the document - the one the age was rendered next to. */
+      let nearest = null
+      for (const date of dates) {
+        if (date.compareDocumentPosition(textNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          nearest = date
+        }
+      }
+      /* The scope is returned as well, so that the check for a date of death
+      below looks at exactly the region the date was found in. */
+      return { dateElement: nearest || dates[0], scope: scope }
+    }
+
+    if (scope.id === "mw-content-text") {
+      break
+    }
+    scope = scope.parentElement
   }
 
   return null
+}
+
+/**
+ * Check whether an age sits alongside a date of death, in which case it is the
+ * age the subject reached - computed from two dates that do not move, so it
+ * must be left as it is.
+ * @param {HTMLElement} scope - The region the age and its date were found in
+ * @returns {boolean} - True if the age is an age at death
+ */
+function isAgeAtDeath(scope) {
+  return scope.querySelector(".dday, .deathdate") !== null
 }
 
 /**
@@ -96,79 +160,47 @@ function markReplacement(textNode, match, replacement, revisionDateLabel) {
 }
 
 /**
- * Rewrite every age inside one region, against the given date.
- * @param {HTMLElement} region - Element holding the age text
- * @param {string} birthDate - Date of birth in the format "YYYY-MM-DD"
- * @param {Date} revisionDate - The date the revision was current
- * @param {string} revisionDateLabel - Human readable date, shown in the tooltip
- * @returns {number} - How many ages were changed
- */
-function rewriteAgesIn(region, birthDate, revisionDate, revisionDateLabel) {
-  const years = ageInYearsAt(birthDate, revisionDate)
-  if (years < 0) {
-    return 0
-  }
-
-  /* The text nodes are collected before anything is edited, because splitting
-  a text node while walking would have the walker visit the new halves. */
-  const walker = document.createTreeWalker(region, NodeFilter.SHOW_TEXT)
-  const textNodes = []
-  while (walker.nextNode()) {
-    textNodes.push(walker.currentNode)
-  }
-
-  let changed = 0
-  for (const textNode of textNodes) {
-    if (textNode.parentElement && textNode.parentElement.closest("." + WTT_ADJUSTED_AGE_CLASS)) {
-      continue
-    }
-    for (const { pattern, rebuild } of WTT_AGE_PATTERNS) {
-      const match = textNode.nodeValue.match(pattern)
-      if (!match) {
-        continue
-      }
-      const replacement = rebuild(match, years)
-      if (replacement !== match[0]) {
-        markReplacement(textNode, match, replacement, revisionDateLabel)
-        changed++
-      }
-      break
-    }
-  }
-
-  return changed
-}
-
-/**
  * Recompute every age on the page against the date of the revision shown.
  * @param {Date} revisionDate - The date the revision was current
- * @returns {number} - How many ages were changed
+ * @returns {object} - Counts of what was found and what was changed
  */
 function adjustAgesToRevisionDate(revisionDate) {
+  const root = document.getElementById("mw-content-text") || document.body
   const revisionDateLabel = formatCreationDate(revisionDate.toISOString().split("T")[0])
-  let changed = 0
 
-  for (const dateElement of document.querySelectorAll(".bday")) {
-    const birthDate = dateElement.textContent.trim()
+  const ages = findAgesOnPage(root)
+  const report = { found: ages.length, changed: 0, withoutDate: 0, atDeath: 0, imprecise: 0 }
+
+  for (const { textNode, match, rebuild } of ages) {
+    const date = findDateForAge(textNode)
+    if (!date) {
+      report.withoutDate++
+      continue
+    }
+    if (isAgeAtDeath(date.scope)) {
+      report.atDeath++
+      continue
+    }
+
+    const birthDate = date.dateElement.textContent.trim()
     if (!WTT_COMPLETE_DATE.test(birthDate)) {
+      report.imprecise++
       continue
     }
 
-    const region = findAgeRegion(dateElement)
-    if (!region) {
+    const years = ageInYearsAt(birthDate, revisionDate)
+    if (years < 0) {
       continue
     }
 
-    /* An age next to a date of death is the age the person reached, computed
-    from two dates that do not move, so it must be left alone. */
-    if (region.querySelector(".dday, .deathdate")) {
-      continue
+    const replacement = rebuild(match, years)
+    if (replacement !== match[0]) {
+      markReplacement(textNode, match, replacement, revisionDateLabel)
+      report.changed++
     }
-
-    changed += rewriteAgesIn(region, birthDate, revisionDate, revisionDateLabel)
   }
 
-  return changed
+  return report
 }
 
 /**
@@ -178,6 +210,32 @@ function restoreOriginalAges() {
   for (const marker of document.querySelectorAll("." + WTT_ADJUSTED_AGE_CLASS)) {
     marker.replaceWith(document.createTextNode(marker.dataset.wttOriginal))
   }
+}
+
+/**
+ * Say what happened, so that a page where nothing changed can be told apart
+ * from a page the script never looked at.
+ * @param {object} report - The counts returned by adjustAgesToRevisionDate
+ * @param {string} revisionDateLabel - Human readable date of the revision
+ */
+function reportAgeAdjustment(report, revisionDateLabel) {
+  if (report.changed > 0) {
+    console.log(
+      "Wikipedia Time Travel: adjusted " +
+        report.changed +
+        (report.changed === 1 ? " age" : " ages") +
+        " to " +
+        revisionDateLabel +
+        "."
+    )
+    return
+  }
+
+  console.log(
+    "Wikipedia Time Travel: no ages adjusted on this revision. " +
+      JSON.stringify(report) +
+      ". 'found' counts ages matched in the text; the rest were skipped for the reason named."
+  )
 }
 
 /**
@@ -205,7 +263,8 @@ function restoreOriginalAges() {
       )
       revisionDate = new Date(timestamp)
     }
-    adjustAgesToRevisionDate(revisionDate)
+    const label = formatCreationDate(revisionDate.toISOString().split("T")[0])
+    reportAgeAdjustment(adjustAgesToRevisionDate(revisionDate), label)
   }
 
   try {

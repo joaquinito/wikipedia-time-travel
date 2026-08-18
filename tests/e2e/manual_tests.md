@@ -180,3 +180,15 @@ been reloaded, so Chrome is still running an older manifest without the `storage
 3. Open a current article, not an old revision.
 
     **Expected**: No age is underlined anywhere; the extension leaves current pages alone.
+
+### Test 17: The age adjustment says what it did
+
+The extension writes one line to the page's console on every old revision, which is the quickest
+way to tell "the script never ran" apart from "the script ran and found nothing".
+
+1. Travel back on any article, then open the console for the page (right-click the article →
+   Inspect → Console).
+
+    **Expected**: A line beginning `Wikipedia Time Travel:` - either `adjusted N ages to <date>`,
+    or `no ages adjusted on this revision` followed by counts of what was found and why each was
+    skipped. If no such line appears at all, the content script is not running on the page.

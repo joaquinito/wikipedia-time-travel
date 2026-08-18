@@ -24,6 +24,22 @@ const ENGLISH_LOCALE_CODES = [
 ]
 
 /**
+ * Call the MediaWiki API.
+ *
+ * The endpoints above carry origin=*, which asks MediaWiki to treat the call
+ * as anonymous. Credentials are omitted to match: from the popup the call is
+ * cross-origin and carries none anyway, but the in-page scripts call the API
+ * of the wiki they are running on, where the browser would otherwise attach
+ * the reader's session cookies.
+ *
+ * @param {string} url - Full API URL
+ * @returns {Promise<Response>}
+ */
+function wttFetchApi(url) {
+  return fetch(url, { credentials: "omit" })
+}
+
+/**
  * Check if the URL leads to an Wikipedia page (legacy revisions included)
  * @param {string} url - URL to check
  * @returns {boolean} - True if the URL is a Wikipedia page, false otherwise
@@ -89,7 +105,7 @@ async function getWikipediaPageName(url) {
     }
     if (queryParams.has("oldid")) {
       // If title is not present in the URL, get the title using the MediaWiki API
-      const response = await fetch(
+      const response = await wttFetchApi(
         "https://" +
           getPageLanguage(url) +
           MEDIAWIKI_API_QUERY +
@@ -111,7 +127,7 @@ async function getWikipediaPageName(url) {
  * @returns {string} - Date in the format "YYYY-MM-DD"
  */
 async function getCreationDate(pageName, language) {
-  const response = await fetch(
+  const response = await wttFetchApi(
     "https://" +
       language +
       MEDIAWIKI_API_GET_FIRST_REVISION +
@@ -133,7 +149,7 @@ async function getCreationDate(pageName, language) {
  * @returns {string} - URL of the revision page
  */
 async function getRevisionUrlForDate(pageName, language, date) {
-  const response = await fetch(
+  const response = await wttFetchApi(
     "https://" +
       language +
       MEDIAWIKI_API_GET_REVISION +
@@ -156,7 +172,7 @@ async function getRevisionUrlForDate(pageName, language, date) {
  * @returns {string} - Timestamp in ISO 8601 format
  */
 async function getRevisionTimestamp(revisionId, language) {
-  const response = await fetch(
+  const response = await wttFetchApi(
     "https://" + language + MEDIAWIKI_API_GET_REVISION_TIMESTAMP + "&revids=" + revisionId
   )
   const data = await response.json()
