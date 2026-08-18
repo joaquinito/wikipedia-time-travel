@@ -6,6 +6,8 @@ const {
   getWikipediaPageName,
   getCreationDate,
   getRevisionUrlForDate,
+  getRevisionTimestamp,
+  ageInYearsAt,
   formatCreationDate
 } = require("../../shared/mediawiki")
 
@@ -158,6 +160,61 @@ describe("Function getRevisionUrlForDate() ", () => {
 
     await getRevisionUrlForDate("Atlantic Ocean", "en", "2014-04-07")
     expect(fetchMock.mock.calls[0][0]).toContain("&titles=Atlantic_Ocean")
+  })
+})
+
+// Tests for getRevisionTimestamp()
+describe("Function getRevisionTimestamp() ", () => {
+
+  beforeEach(() => {
+    fetchMock.resetMocks();
+  });
+
+  test("returns the timestamp of the given revision", async () => {
+
+    fetchMock.mockResponseOnce(JSON.stringify({
+      "query": {
+        "pages": [
+          {
+            "pageid": 9228,
+            "title": "Earth",
+            "revisions": [{ "timestamp": "2014-04-02T16:33:26Z" }]
+          }
+        ]
+      }
+    }));
+
+    expect(await getRevisionTimestamp("602452976", "en")).toBe("2014-04-02T16:33:26Z")
+  })
+})
+
+// Tests for ageInYearsAt()
+describe("Function ageInYearsAt() ", () => {
+
+  test("returns the age in completed years on the given date", () => {
+    expect(ageInYearsAt("1955-02-24", new Date("2014-04-07T12:00:00Z"))).toBe(59)
+  })
+
+  test("has not counted the birthday of that year the day before it", () => {
+    expect(ageInYearsAt("1955-04-08", new Date("2014-04-07T12:00:00Z"))).toBe(58)
+  })
+
+  test("counts the birthday of that year on the day itself", () => {
+    expect(ageInYearsAt("1955-04-07", new Date("2014-04-07T12:00:00Z"))).toBe(59)
+  })
+
+  test("counts a 29 February birthday on 28 February of a non-leap year", () => {
+    expect(ageInYearsAt("2000-02-29", new Date("2015-02-28T12:00:00Z"))).toBe(14)
+  })
+
+  test("is not thrown off by the reader's time zone", () => {
+    // Late UTC on the day before a birthday is still the day before, anywhere
+    expect(ageInYearsAt("1955-04-08", new Date("2014-04-07T23:30:00Z"))).toBe(58)
+    expect(ageInYearsAt("1955-04-08", new Date("2014-04-08T00:30:00Z"))).toBe(59)
+  })
+
+  test("returns -1 for a date before the person was born", () => {
+    expect(ageInYearsAt("2020-01-01", new Date("2014-04-07T12:00:00Z"))).toBe(-1)
   })
 })
 

@@ -150,3 +150,33 @@ been reloaded, so Chrome is still running an older manifest without the `storage
 
     **Expected**: The `Show on Wikipedia pages` checkbox is disabled and the text below it reads
     "Unavailable. Reload the extension in chrome://extensions." The rest of the popup still works.
+
+### Test 15: Infobox ages are recomputed for the revision
+
+1. Open the article for a living person with a date of birth in the infobox, for example
+   https://en.wikipedia.org/wiki/Brian_May, and note the age shown under "Born".
+2. Travel back to 1 January 2010.
+
+    **Expected**: The age under "Born" is the age that person was in January 2010, not today's
+    age, and it is underlined with a dotted line. Hovering over it shows the revision date and the
+    age the article itself renders.
+
+3. Untick `Adjust ages to the revision` in the popup.
+
+    **Expected**: The age goes back to the one the article renders, without reloading the page.
+
+### Test 16: Ages that must not move are left alone
+
+1. Open an article for someone who has died, for example
+   https://en.wikipedia.org/wiki/Steve_Jobs, and travel back to 1 January 2013.
+
+    **Expected**: The "(aged 56)" next to the date of death is unchanged and not underlined - it is
+    the age reached, computed from two fixed dates.
+
+2. Open an article whose subject has only a year of birth in the infobox and travel back.
+
+    **Expected**: The "(age N–N)" range is unchanged and not underlined.
+
+3. Open a current article, not an old revision.
+
+    **Expected**: No age is underlined anywhere; the extension leaves current pages alone.

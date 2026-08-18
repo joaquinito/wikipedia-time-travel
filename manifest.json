@@ -25,7 +25,8 @@
       "js": [
         "shared/mediawiki.js",
         "shared/settings.js",
-        "content/wikipedia_time_travel_page.js"
+        "content/wikipedia_time_travel_page.js",
+        "content/wikipedia_time_travel_ages.js"
       ],
       "css": [
         "content/wikipedia_time_travel_page.css"

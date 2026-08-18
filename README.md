@@ -31,6 +31,26 @@ date picker without leaving the page.
 This is on by default and can be turned off with the *Show on Wikipedia pages* checkbox at the
 bottom of the popup. Turning it on or off takes effect straight away, without reloading the page.
 
+## Ages on old revisions
+
+Templates like `{{birth date and age}}` do not store an age in the wikitext - the age is worked out
+when the page is rendered. An old revision is rendered today, so those ages read as the age *now*,
+however far back you have travelled.
+
+The extension recomputes them against the date of the revision you are looking at, and underlines
+what it changed with a dotted line; hovering over it shows what the article itself says. This can
+be turned off with the *Adjust ages to the revision* checkbox in the popup.
+
+Only ages anchored to an [hCard](https://en.wikipedia.org/wiki/HCard) date - the hidden
+`<span class="bday">` those templates emit - are touched, so the extension never has to guess what
+a bare number in an article means. In practice that covers `(age N)` from `{{birth date and age}}`
+and `N years ago` from `{{start date and age}}`. Deliberately left alone:
+
+- **Ages at death.** `(aged N)` is computed from two dates that do not move, so it is already right.
+- **Imprecise dates.** `{{birth year and age}}` gives only a year, which cannot produce an exact age.
+- **Everything else that is relative to now**, such as prose saying "as of this year", populations
+  or standings. Those are beyond what the extension can identify.
+
 ## Installation on Google Chrome (unpacked extension)
 
 1. Clone this repository to your local machine.
@@ -54,7 +74,7 @@ bottom of the popup. Turning it on or off takes effect straight away, without re
 | Path | What it holds |
 | --- | --- |
 | `popup/` | The toolbar popup |
-| `content/` | The in-page widget, injected into Wikipedia articles |
+| `content/` | The in-page widget and the age adjustment, injected into Wikipedia articles |
 | `shared/` | MediaWiki API calls and settings storage, used by both |
 
 ## Running tests 
