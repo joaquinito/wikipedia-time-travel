@@ -13,8 +13,6 @@ const MEDIAWIKI_API_GET_REVISION =
   ".wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvlimit=1&rvprop=timestamp%7Cids&origin=*"
 const MEDIAWIKI_API_GET_FIRST_REVISION =
   ".wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvlimit=1&rvprop=timestamp%7Cids&origin=*&rvdir=newer"
-const MEDIAWIKI_API_GET_REVISION_TIMESTAMP =
-  ".wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvprop=timestamp&origin=*"
 
 /* Locales for which the browser's own long date format is used as-is. Any
 other locale falls back to en-GB, so the English label reads correctly. */
@@ -22,22 +20,6 @@ const ENGLISH_LOCALE_CODES = [
   "en", "en-AU", "en-BZ", "en-CA", "en-GB", "en-HK", "en-IN",
   "en-IE", "en-MY", "en-NZ", "en-SG", "en-UK", "en-US", "en-ZA",
 ]
-
-/**
- * Call the MediaWiki API.
- *
- * The endpoints above carry origin=*, which asks MediaWiki to treat the call
- * as anonymous. Credentials are omitted to match: from the popup the call is
- * cross-origin and carries none anyway, but the in-page scripts call the API
- * of the wiki they are running on, where the browser would otherwise attach
- * the reader's session cookies.
- *
- * @param {string} url - Full API URL
- * @returns {Promise<Response>}
- */
-function wttFetchApi(url) {
-  return fetch(url, { credentials: "omit" })
-}
 
 /**
  * Check if the URL leads to an Wikipedia page (legacy revisions included)
@@ -105,7 +87,7 @@ async function getWikipediaPageName(url) {
     }
     if (queryParams.has("oldid")) {
       // If title is not present in the URL, get the title using the MediaWiki API
-      const response = await wttFetchApi(
+      const response = await fetch(
         "https://" +
           getPageLanguage(url) +
           MEDIAWIKI_API_QUERY +
@@ -127,7 +109,7 @@ async function getWikipediaPageName(url) {
  * @returns {string} - Date in the format "YYYY-MM-DD"
  */
 async function getCreationDate(pageName, language) {
-  const response = await wttFetchApi(
+  const response = await fetch(
     "https://" +
       language +
       MEDIAWIKI_API_GET_FIRST_REVISION +
@@ -149,7 +131,7 @@ async function getCreationDate(pageName, language) {
  * @returns {string} - URL of the revision page
  */
 async function getRevisionUrlForDate(pageName, language, date) {
-  const response = await wttFetchApi(
+  const response = await fetch(
     "https://" +
       language +
       MEDIAWIKI_API_GET_REVISION +
@@ -163,47 +145,6 @@ async function getRevisionUrlForDate(pageName, language, date) {
 
   const revId = data.query.pages[0].revisions[0].revid
   return "https://" + language + MEDIAWIKI_INDEX_ENDPOINT + "&oldid=" + revId
-}
-
-/**
- * Get the timestamp of a specific revision of a Wikipedia page.
- * @param {string} revisionId - Revision id, as found in the "oldid" URL parameter
- * @param {string} language - Language code of the Wikipedia page (e.g. "en", "es")
- * @returns {string} - Timestamp in ISO 8601 format
- */
-async function getRevisionTimestamp(revisionId, language) {
-  const response = await wttFetchApi(
-    "https://" + language + MEDIAWIKI_API_GET_REVISION_TIMESTAMP + "&revids=" + revisionId
-  )
-  const data = await response.json()
-
-  return data.query.pages[0].revisions[0].timestamp
-}
-
-/**
- * Age in completed years on a given date.
- *
- * Both dates are read in UTC: birth dates come from the hCard microformat as a
- * plain "YYYY-MM-DD", which Date parses as UTC midnight, and revision
- * timestamps are UTC too. Mixing in the local time zone would move the
- * birthday by a day for readers either side of UTC.
- *
- * @param {string} birthDate - Date of birth in the format "YYYY-MM-DD"
- * @param {Date} onDate - The date to compute the age on
- * @returns {number} - Age in years, or -1 if the person was not born yet
- */
-function ageInYearsAt(birthDate, onDate) {
-  const birth = new Date(birthDate)
-  let age = onDate.getUTCFullYear() - birth.getUTCFullYear()
-
-  const monthsApart = onDate.getUTCMonth() - birth.getUTCMonth()
-  const beforeBirthdayThatYear =
-    monthsApart < 0 || (monthsApart === 0 && onDate.getUTCDate() < birth.getUTCDate())
-  if (beforeBirthdayThatYear) {
-    age--
-  }
-
-  return age < 0 ? -1 : age
 }
 
 /**
@@ -231,8 +172,6 @@ if (typeof module !== "undefined" && module.exports) {
     getWikipediaPageName,
     getCreationDate,
     getRevisionUrlForDate,
-    getRevisionTimestamp,
-    ageInYearsAt,
     formatCreationDate,
   }
 }

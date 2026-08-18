@@ -11,10 +11,10 @@ The Wikipedia Time Travel browser extension uses the URL of the active tab to ch
           
 ## What we store
 
-The only things the extension stores are your own preferences: whether the Time Travel button is
-shown on Wikipedia pages, and whether ages are adjusted to the revision being viewed. They are kept
-in your browser's extension storage, and are synchronised between your browsers by the browser
-itself if you are signed in to it. They contain no information about the pages you visit.
+The only thing the extension stores is your own preference for whether the Time Travel button is
+shown on Wikipedia pages. It is kept in your browser's extension storage, and is synchronised
+between your browsers by the browser itself if you are signed in to it. It contains no information
+about the pages you visit.
 
 ## What information do we collect and share
 

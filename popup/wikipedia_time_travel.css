@@ -316,18 +316,14 @@ body {
   border-top: 1px solid var(--wtt-border);
 }
 
-.setting {
+#in-page-widget-setting {
   display: flex;
   align-items: flex-start;
   gap: 7px;
   cursor: pointer;
 }
 
-.setting + .setting {
-  margin-top: 10px;
-}
-
-#settings input[type="checkbox"] {
+#in-page-widget-checkbox {
   flex: none;
   width: 14px;
   height: 14px;

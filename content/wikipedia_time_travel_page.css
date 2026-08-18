@@ -247,13 +247,3 @@ html.skin-theme-clientpref-night .wtt-widget {
     transition: none;
   }
 }
-
-/* --------------------------------------------------------------------------
-   Ages recomputed for the revision being viewed. Marked so a reader can tell
-   the extension wrote this, not the article.
-   -------------------------------------------------------------------------- */
-
-.wtt-adjusted-age {
-  border-bottom: 1px dotted var(--color-progressive, #3366cc);
-  cursor: help;
-}

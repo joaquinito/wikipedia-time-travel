@@ -99,7 +99,6 @@ async function addWidgetToCurrentTab() {
       "shared/mediawiki.js",
       "shared/settings.js",
       "content/wikipedia_time_travel_page.js",
-      "content/wikipedia_time_travel_ages.js",
     ],
   })
 }
@@ -108,47 +107,36 @@ async function addWidgetToCurrentTab() {
  * Show the current value of the in-page widget setting, and store any change.
  */
 async function setUpSettings() {
-  const widgetCheckbox = document.getElementById("in-page-widget-checkbox")
-  const agesCheckbox = document.getElementById("adjust-ages-checkbox")
+  const checkbox = document.getElementById("in-page-widget-checkbox")
 
   /* chrome.storage is only defined when the "storage" permission is granted.
   If the extension is running an older manifest - which happens when the files
-  have changed on disk but the extension has not been reloaded - the checkboxes
+  have changed on disk but the extension has not been reloaded - the checkbox
   would silently store nothing, so say so instead. */
   if (typeof chrome === "undefined" || !chrome.storage) {
     console.error(
       "Wikipedia Time Travel: chrome.storage is unavailable. " +
         "Reload the extension in chrome://extensions to pick up the current manifest."
     )
-    for (const [checkbox, hintId] of [
-      [widgetCheckbox, "setting-hint"],
-      [agesCheckbox, "adjust-ages-hint"],
-    ]) {
-      checkbox.disabled = true
-      document.getElementById(hintId).textContent =
-        "Unavailable. Reload the extension in chrome://extensions."
-    }
+    checkbox.disabled = true
+    document.getElementById("setting-hint").textContent =
+      "Unavailable. Reload the extension in chrome://extensions."
     return
   }
 
   const settings = await getSettings()
-  widgetCheckbox.checked = settings[WTT_SETTING_IN_PAGE_WIDGET]
-  agesCheckbox.checked = settings[WTT_SETTING_ADJUST_AGES]
+  checkbox.checked = settings[WTT_SETTING_IN_PAGE_WIDGET]
 
-  widgetCheckbox.addEventListener("change", async () => {
-    await setSetting(WTT_SETTING_IN_PAGE_WIDGET, widgetCheckbox.checked)
+  checkbox.addEventListener("change", async () => {
+    await setSetting(WTT_SETTING_IN_PAGE_WIDGET, checkbox.checked)
 
-    if (widgetCheckbox.checked) {
+    if (checkbox.checked) {
       try {
         await addWidgetToCurrentTab()
       } catch (error) {
         console.error("Wikipedia Time Travel: could not add the widget to this tab.", error)
       }
     }
-  })
-
-  agesCheckbox.addEventListener("change", () => {
-    setSetting(WTT_SETTING_ADJUST_AGES, agesCheckbox.checked)
   })
 }
 

@@ -6,13 +6,11 @@ same way as shared/mediawiki.js.
 */
 
 const WTT_SETTING_IN_PAGE_WIDGET = "showInPageWidget"
-const WTT_SETTING_ADJUST_AGES = "adjustAgesToRevisionDate"
 
 /* Defaults are passed to chrome.storage.sync.get(), so a setting that has
 never been written still comes back with a usable value. */
 const WTT_SETTINGS_DEFAULTS = {
   [WTT_SETTING_IN_PAGE_WIDGET]: true,
-  [WTT_SETTING_ADJUST_AGES]: true,
 }
 
 /**
@@ -54,9 +52,5 @@ function onSettingChanged(callback) {
 
 // module.exports is used when running the tests with Node
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = {
-    WTT_SETTING_IN_PAGE_WIDGET,
-    WTT_SETTING_ADJUST_AGES,
-    WTT_SETTINGS_DEFAULTS,
-  }
+  module.exports = { WTT_SETTING_IN_PAGE_WIDGET, WTT_SETTINGS_DEFAULTS }
 }
