@@ -87,6 +87,82 @@ describe("Chrome Extension Popup Test", () => {
     })
   })
 
+  describe("During loading state for the URL https://en.wikipedia.org/wiki/Earth", () => {
+
+    /* Setup: hold the MediaWiki API fetch pending so the loading state can be observed
+       directly, instead of racing the real network call to catch it live. */
+    beforeEach(async () => {
+      browser = await getBrowser("en-US")
+      extensionId = await getExtensionId(browser)
+      extensionPage = await browser.newPage()
+      await extensionPage.evaluateOnNewDocument(() => {
+        window.__pendingFetchResolvers = []
+        const originalFetch = window.fetch.bind(window)
+        window.fetch = (url, ...rest) => {
+          if (typeof url === "string" && url.includes("/w/api.php")) {
+            return new Promise((resolve) => {
+              window.__pendingFetchResolvers.push(() => resolve(originalFetch(url, ...rest)))
+            })
+          }
+          return originalFetch(url, ...rest)
+        }
+      })
+      await extensionPage.goto(
+        "chrome-extension://" +
+          extensionId +
+          "/popup/wikipedia_time_travel.html?testUrl=" +
+          WIKIPEDIA_PAGE_EARTH
+      )
+      await (await browser.pages())[0].close() // Close the first empty tab
+    }, (timeout = 60000))
+
+    async function releasePendingFetches() {
+      await extensionPage.evaluate(() => {
+        window.__pendingFetchResolvers.forEach((resolveFetch) => resolveFetch())
+        window.__pendingFetchResolvers = []
+      })
+    }
+
+    test("popup shows the loading skeleton while the article data is loading", async () => {
+      const loaderDisplayStyle = await extensionPage.$eval(
+        "#loader",
+        (el) => window.getComputedStyle(el).display
+      )
+      expect(loaderDisplayStyle).not.toBe("none")
+
+      const skeletonBlockCount = await extensionPage.$$eval(
+        "#loader .skeleton",
+        (elements) => elements.length
+      )
+      expect(skeletonBlockCount).toBe(3)
+
+      const articleNameWhileLoading = await extensionPage.$eval(
+        "#article-name",
+        (el) => el.innerText
+      )
+      expect(articleNameWhileLoading).toBe("")
+
+      await releasePendingFetches()
+    }, timeout = 60000)
+
+    test("popup's loading skeleton should match the loaded content's height so the popup does not resize", async () => {
+      const heightWhileLoading = await extensionPage.evaluate(() => document.body.scrollHeight)
+
+      await releasePendingFetches()
+
+      let articleName = ""
+      do {
+        articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleName === "")
+
+      const heightAfterLoaded = await extensionPage.evaluate(() => document.body.scrollHeight)
+
+      // The skeleton only approximates the real content's shape, so allow a small gap
+      // rather than requiring a pixel-perfect match.
+      expect(Math.abs(heightAfterLoaded - heightWhileLoading)).toBeLessThanOrEqual(20)
+    }, timeout = 60000)
+  })
+
   describe("For a URL that is not a Wikipedia page", () => {
 
     /* Setup */
