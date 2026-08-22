@@ -85,6 +85,63 @@ describe("Chrome Extension Popup Test", () => {
       } while (articleCreationDateText === "")
       expect(articleCreationDateText).toBe("Page created on November 6, 2001")
     })
+
+     test("typing a valid date into the date picker enables the Go button", async () => {
+      // Wait for the popup to finish loading, so the date picker's min/max and the
+      // Go button's enabling logic are wired up
+      let articleName = ""
+      do {
+        articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleName === "")
+
+      const submitButtonWasDisabled = await extensionPage.$eval(
+        "#submit-button",
+        (el) => el.disabled
+      )
+      expect(submitButtonWasDisabled).toBe(true)
+
+      // The date input's segment order (day/month vs month/day) depends on the browser's
+      // locale, so use a day/month pair that is valid, and within range, either way.
+      await extensionPage.click("#date-picker")
+      await extensionPage.keyboard.type("04072014")
+
+      const datePickerValue = await extensionPage.$eval("#date-picker", (el) => el.value)
+      expect(datePickerValue).not.toBe("")
+
+      const submitButtonIsDisabled = await extensionPage.$eval(
+        "#submit-button",
+        (el) => el.disabled
+      )
+      expect(submitButtonIsDisabled).toBe(false)
+    }, timeout = 60000)
+
+    test("when 7 April 2014 is selected in the date picker, the Wikipedia page for Earth as it was on 7 April 2014 opens", async () => {
+      // Wait for the popup to finish loading, so the date picker's min/max and the
+      // Go button's enabling logic are wired up
+      let articleName = ""
+      do {
+        articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleName === "")
+
+      await extensionPage.$eval("#date-picker", (el) => {
+        el.value = "2014-04-07"
+        el.dispatchEvent(new Event("input", { bubbles: true }))
+      })
+
+      const submitButtonIsDisabled = await extensionPage.$eval(
+        "#submit-button",
+        (el) => el.disabled
+      )
+      expect(submitButtonIsDisabled).toBe(false)
+
+      // Clicking "Go" navigates the current tab (this same popup page) to the old revision
+      await Promise.all([
+        extensionPage.waitForNavigation(),
+        extensionPage.click("#submit-button"),
+      ])
+
+      expect(extensionPage.url()).toContain("oldid=602452976")
+    }, timeout = 60000)  
   })
 
   describe("During loading state for the URL https://en.wikipedia.org/wiki/Earth", () => {
