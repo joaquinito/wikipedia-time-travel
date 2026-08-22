@@ -151,7 +151,9 @@ async function displayWikipediaPageData(pageName, language) {
     "Page created on " + creationDateLongFormat  
   document.getElementById("form-body").style.display = "block"
   document.getElementById("loader").style.display = "none"
-  
+
+  // Fades the content in once the skeleton is replaced by real data
+  document.body.classList.add("is-ready")
 }
 
 /**
@@ -217,6 +219,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.log("Current tab is not a Wikipedia page.")
     document.getElementById("placeholder-message").style.display = "block"
     document.getElementById("loader").style.display = "none"
+    document.body.classList.add("is-ready")
   }
 
   /* After the user selects a date in the date picker, enable the submit button 
