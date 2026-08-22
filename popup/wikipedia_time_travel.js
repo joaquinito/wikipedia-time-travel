@@ -1,3 +1,11 @@
+const DATE_FORMAT_OPTIONS = { day: "numeric", month: "long", year: "numeric" }
+const ENGLISH_LOCALE_CODES = ["en", "en-AU", "en-BZ", "en-CA", "en-GB", "en-HK", "en-IN",
+                               "en-IE", "en-MY", "en-NZ", "en-SG",  "en-UK", "en-US", "en-ZA"]
+
+// Date of the revision currently displayed by the popup, so quick jumps can be made
+// relative to it instead of always relative to today
+let currentlyShownDate = null
+
 const MEDIAWIKI_INDEX_ENDPOINT = ".wikipedia.org/w/index.php?"
 const MEDIAWIKI_API_QUERY = ".wikipedia.org/w/api.php?action=query&prop=info&format=json&origin=*"
 const MEDIAWIKI_API_GET_REVISION =
@@ -93,6 +101,52 @@ async function getWikipediaPageName(url) {
 }
 
 /**
+ * Get the revision id from a Wikipedia URL, if it has one
+ * @param {string} url - URL of the page
+ * @returns {string|null} - Revision id, or null if the URL has none
+ */
+function getRevisionIdFromUrl(url) {
+  const urlObj = new URL(url)
+  const queryParams = new URLSearchParams(urlObj.search)
+  return queryParams.get("oldid")
+}
+
+/**
+ * Format a "YYYY-MM-DD" date string as a long-form date, following the browser's locale
+ * @param {string} dateString - Date in the format "YYYY-MM-DD"
+ * @returns {string} - Long-form date, e.g. "10 July 2020" or "July 10, 2020"
+ */
+function formatDateForDisplay(dateString) {
+  const dateObj = new Date(dateString)
+  const browserLanguage = navigator.language
+  return ENGLISH_LOCALE_CODES.includes(browserLanguage)
+    ? dateObj.toLocaleDateString(browserLanguage, DATE_FORMAT_OPTIONS)
+    : dateObj.toLocaleDateString("en-GB", DATE_FORMAT_OPTIONS)
+}
+
+/**
+ * Get the date N days/weeks/months/years before a reference date, in "YYYY-MM-DD" format,
+ * clamped to minDate so it never lands before the page existed.
+ * @param {number|string} amount - How many units to go back
+ * @param {string} unit - One of "days", "weeks", "months", "years"
+ * @param {string} minDate - Earliest allowed date, in "YYYY-MM-DD" format
+ * @param {string} [referenceDate] - Date to count back from, in "YYYY-MM-DD" format. Defaults to today
+ * @returns {string} - Date in the format "YYYY-MM-DD"
+ */
+function getRelativeDateString(amount, unit, minDate, referenceDate) {
+  const n = parseInt(amount, 10) || 1
+  const date = referenceDate ? new Date(referenceDate) : new Date()
+
+  if (unit === "days") date.setDate(date.getDate() - n)
+  else if (unit === "weeks") date.setDate(date.getDate() - n * 7)
+  else if (unit === "months") date.setMonth(date.getMonth() - n)
+  else date.setFullYear(date.getFullYear() - n)
+
+  const dateString = date.toISOString().split("T")[0]
+  return dateString < minDate ? minDate : dateString
+}
+
+/**
  * Get the creation date of a Wikipedia page, by calling the MediaWiki API.
  * @param {string} pageName - Page name
  * @param {string} language - Language code of the Wikipedia page (e.g. "en", "es")
@@ -117,29 +171,42 @@ async function getCreationDate(pageName, language) {
 }
 
 /**
+ * Remember the date that was requested to reach a given revision, so the popup can
+ * later remind the user what they were looking at.
+ * @param {string|number} revId - Revision id
+ * @param {string} date - Date in the format "YYYY-MM-DD"
+ */
+function rememberFetchedDate(revId, date) {
+  chrome.storage.local.get({ fetchedDates: {} }, (result) => {
+    const fetchedDates = result.fetchedDates
+    fetchedDates[revId] = date
+    chrome.storage.local.set({ fetchedDates })
+  })
+}
+
+/**
+ * Recall the date that was previously requested to reach a given revision, if any
+ * @param {string|number} revId - Revision id
+ * @returns {Promise<string|undefined>} - Date in the format "YYYY-MM-DD", or undefined
+ */
+function recallFetchedDate(revId) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get({ fetchedDates: {} }, (result) => {
+      resolve(result.fetchedDates[revId])
+    })
+  })
+}
+
+/**
  * Display the article name and creation date on the popup
  * @param {string} pageName - Name of the Wikipedia page
  * @param {string} language - Language code of the Wikipedia page (e.g. "en", "es")
  */
 async function displayWikipediaPageData(pageName, language) {
 
-  const dateFormatOptions = { day: "numeric", month: "long", year: "numeric" }
-  const englishLocaleCodes = ["en", "en-AU", "en-BZ", "en-CA", "en-GB", "en-HK", "en-IN", 
-                              "en-IE", "en-MY", "en-NZ", "en-SG",  "en-UK", "en-US", "en-ZA"]
-  var creationDateLongFormat = null
-
-  // Get the creation date of the page
+  // Get the creation date of the page, display it according to the browser's locale
   const creationDate = await getCreationDate(pageName, language)
-  const dateObj = new Date(creationDate)
-  
-  // Get the browser language, display the date according to the locale
-  const browserLanguage = navigator.language
-  console.log("Browser language: " + browserLanguage)
-  if (englishLocaleCodes.includes(browserLanguage)) {
-    creationDateLongFormat = dateObj.toLocaleDateString(browserLanguage, dateFormatOptions)
-  } else {
-    creationDateLongFormat = dateObj.toLocaleDateString("en-GB", dateFormatOptions)
-  }
+  const creationDateLongFormat = formatDateForDisplay(creationDate)
 
   //Update min and max date for the date picker
   document.getElementById("date-picker").min = creationDate
@@ -154,6 +221,22 @@ async function displayWikipediaPageData(pageName, language) {
 
   // Fades the content in once the skeleton is replaced by real data
   document.body.classList.add("is-ready")
+}
+
+/**
+ * Show the "Currently showing page on <date>" notice below the creation date,
+ * unless that date is today, in which case this is simply the current version of the page.
+ * @param {string} date - Date in the format "YYYY-MM-DD"
+ */
+function displayFetchedDateNotice(date) {
+  currentlyShownDate = date
+
+  const today = new Date().toISOString().split("T")[0]
+  if (date === today) return
+
+  document.getElementById("viewing-date-notice").textContent =
+    "🕰️ Currently showing page on " + formatDateForDisplay(date)
+  document.getElementById("viewing-date-notice").style.display = "block"
 }
 
 /**
@@ -182,6 +265,10 @@ async function openPageInSelectedDate(pageName, language, date) {
 
   // Parse JSON response and extract the revid
   const revId = data.query.pages[0].revisions[0].revid
+  // Remember the requested date, so a later visit to this revision can show it again
+  rememberFetchedDate(revId, date)
+  // Update the popup's own notice right away, without waiting for it to be reopened
+  displayFetchedDateNotice(date)
   // Open corresponding revision page in current tab
   const oldPageUrl = "https://" + language + MEDIAWIKI_INDEX_ENDPOINT + "&oldid=" + revId
   chrome.tabs.update({ url: oldPageUrl })
@@ -193,6 +280,9 @@ async function openPageInSelectedDate(pageName, language, date) {
 document.addEventListener("DOMContentLoaded", async () => {
   const submitButton = document.getElementById("submit-button")
   const datePicker = document.getElementById("date-picker")
+  const relativeGoButton = document.getElementById("relative-go-button")
+  const relativeAmountInput = document.getElementById("relative-amount")
+  const relativeUnitSelect = document.getElementById("relative-unit")
 
   // Submit button is disabled by default
   submitButton.disabled = true
@@ -214,7 +304,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     wikipediaPageName = await getWikipediaPageName(currentUrl)
     wikipediaPageLanguage = getPageLanguage(currentUrl)
     displayWikipediaPageData(wikipediaPageName, wikipediaPageLanguage)
-    
+
+    // If this revision was reached through this extension before, remind the user
+    // what date they last jumped to
+    const revId = getRevisionIdFromUrl(currentUrl)
+    if (revId) {
+      const rememberedDate = await recallFetchedDate(revId)
+      if (rememberedDate) displayFetchedDateNotice(rememberedDate)
+    }
+
   } else {
     console.log("Current tab is not a Wikipedia page.")
     document.getElementById("placeholder-message").style.display = "block"
@@ -233,6 +331,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     const inputDate = document.getElementById("date-picker").value
     await openPageInSelectedDate(wikipediaPageName, wikipediaPageLanguage, inputDate)
   })
+
+  // Open the revision closest to N days/weeks/months/years before the currently shown date
+  // (or today, if no jump has been made yet) when the quick jump button is clicked
+  relativeGoButton.addEventListener("click", async () => {
+    const targetDate = getRelativeDateString(
+      relativeAmountInput.value,
+      relativeUnitSelect.value,
+      datePicker.min,
+      currentlyShownDate
+    )
+    await openPageInSelectedDate(wikipediaPageName, wikipediaPageLanguage, targetDate)
+  })
 })
 
 // module.exports is used when running the tests with Node
@@ -243,5 +353,8 @@ if (typeof module !== "undefined" && module.exports) {
     getPageLanguage,
     getWikipediaPageName,
     getCreationDate,
+    getRelativeDateString,
+    getRevisionIdFromUrl,
+    formatDateForDisplay,
   }
 }

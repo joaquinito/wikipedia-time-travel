@@ -3,7 +3,10 @@ const {
   isSelectedDateValid,
   getPageLanguage,
   getWikipediaPageName,
-  getCreationDate
+  getCreationDate,
+  getRelativeDateString,
+  getRevisionIdFromUrl,
+  formatDateForDisplay
 } = require("../../popup/wikipedia_time_travel")
 
 const fetchMock = require('jest-fetch-mock');
@@ -156,5 +159,94 @@ describe("Function isSelectedDateValid() ", () => {
     }
     expect(isSelectedDateValid(datePickerObj)).toBe(false)
   })
-  
+
+})
+
+// Tests for getRelativeDateString()
+describe("Function getRelativeDateString() ", () => {
+
+  function isoDaysAgo(days) {
+    const date = new Date()
+    date.setDate(date.getDate() - days)
+    return date.toISOString().split("T")[0]
+  }
+
+  test("returns the date N days before today", () => {
+    expect(getRelativeDateString(10, "days", "2000-01-01")).toBe(isoDaysAgo(10))
+  })
+
+  test("returns the date N weeks before today", () => {
+    expect(getRelativeDateString(2, "weeks", "2000-01-01")).toBe(isoDaysAgo(14))
+  })
+
+  test("returns the date N months before today", () => {
+    const expected = new Date()
+    expected.setMonth(expected.getMonth() - 3)
+    expect(getRelativeDateString(3, "months", "2000-01-01")).toBe(
+      expected.toISOString().split("T")[0]
+    )
+  })
+
+  test("returns the date N years before today, which is the default", () => {
+    const expected = new Date()
+    expected.setFullYear(expected.getFullYear() - 1)
+    expect(getRelativeDateString(1, "years", "2000-01-01")).toBe(
+      expected.toISOString().split("T")[0]
+    )
+  })
+
+  test("clamps to minDate when the computed date would be earlier", () => {
+    expect(getRelativeDateString(50, "years", "2010-06-15")).toBe("2010-06-15")
+  })
+
+  test("treats a missing or non-numeric amount as 1", () => {
+    expect(getRelativeDateString(undefined, "years", "2000-01-01")).toBe(
+      getRelativeDateString(1, "years", "2000-01-01")
+    )
+  })
+
+  test("returns the date N years before a given reference date, instead of today", () => {
+    expect(getRelativeDateString(1, "years", "2000-01-01", "2025-08-22")).toBe("2024-08-22")
+  })
+
+  test("returns the date N months before a given reference date", () => {
+    expect(getRelativeDateString(3, "months", "2000-01-01", "2025-08-22")).toBe("2025-05-22")
+  })
+
+  test("clamps a reference-date computation to minDate when it would be earlier", () => {
+    expect(getRelativeDateString(50, "years", "2010-06-15", "2025-08-22")).toBe("2010-06-15")
+  })
+})
+
+// Tests for getRevisionIdFromUrl()
+describe("Function getRevisionIdFromUrl() ", () => {
+
+  test("returns the revision id from a URL that has one", () => {
+    expect(getRevisionIdFromUrl("https://en.wikipedia.org/w/index.php?&oldid=602452976")).toBe(
+      "602452976"
+    )
+  })
+
+  test("returns null for a URL without a revision id", () => {
+    expect(getRevisionIdFromUrl("https://en.wikipedia.org/wiki/Lisbon")).toBe(null)
+  })
+})
+
+// Tests for formatDateForDisplay()
+describe("Function formatDateForDisplay() ", () => {
+  const originalLanguage = navigator.language
+
+  afterEach(() => {
+    Object.defineProperty(navigator, "language", { value: originalLanguage, configurable: true })
+  })
+
+  test("formats the date following an English browser locale", () => {
+    Object.defineProperty(navigator, "language", { value: "en-US", configurable: true })
+    expect(formatDateForDisplay("2020-07-10")).toBe("July 10, 2020")
+  })
+
+  test("falls back to day/month/year order for a non-English browser locale", () => {
+    Object.defineProperty(navigator, "language", { value: "pt-PT", configurable: true })
+    expect(formatDateForDisplay("2020-07-10")).toBe("10 July 2020")
+  })
 })

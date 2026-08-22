@@ -75,6 +75,19 @@ describe("Chrome Extension Popup Test", () => {
       expect(articleName).toBe("Earth")
     })
 
+    test("popup does not show the \"Showing the page as it was on\" reminder for the current version of the page", async () => {
+      let articleName = ""
+      do {
+        articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleName === "")
+
+      const noticeIsHidden = await extensionPage.$eval(
+        "#viewing-date-notice",
+        (el) => window.getComputedStyle(el).display === "none"
+      )
+      expect(noticeIsHidden).toBe(true)
+    })
+
     test('popup should show the text "Page created on November 6, 2001"', async () => {
       let articleCreationDateText = ""
       do {
@@ -141,7 +154,181 @@ describe("Chrome Extension Popup Test", () => {
       ])
 
       expect(extensionPage.url()).toContain("oldid=602452976")
-    }, timeout = 60000)  
+    }, timeout = 60000)
+
+    test("clicking the quick jump Go button opens the page as it was 1 year ago by default", async () => {
+      // Wait for the popup to finish loading, so the quick jump button is wired up
+      let articleName = ""
+      do {
+        articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleName === "")
+
+      const relativeAmount = await extensionPage.$eval("#relative-amount", (el) => el.value)
+      const relativeUnit = await extensionPage.$eval("#relative-unit", (el) => el.value)
+      expect(relativeAmount).toBe("1")
+      expect(relativeUnit).toBe("years")
+
+      // Clicking the quick jump Go button navigates the current tab to the old revision,
+      // without requiring the exact date picker to be touched first
+      await Promise.all([
+        extensionPage.waitForNavigation(),
+        extensionPage.click("#relative-go-button"),
+      ])
+
+      expect(extensionPage.url()).toContain("oldid=")
+    }, timeout = 60000)
+
+    test("reopening the popup on a previously reached revision shows what date it was fetched for", async () => {
+      // Wait for the popup to finish loading, so the date picker's min/max and the
+      // Go button's enabling logic are wired up
+      let articleName = ""
+      do {
+        articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleName === "")
+
+      // Jump to the revision closest to 7 April 2014
+      await extensionPage.$eval("#date-picker", (el) => {
+        el.value = "2014-04-07"
+        el.dispatchEvent(new Event("input", { bubbles: true }))
+      })
+      await Promise.all([
+        extensionPage.waitForNavigation(),
+        extensionPage.click("#submit-button"),
+      ])
+      const revisionUrl = extensionPage.url()
+      expect(revisionUrl).toContain("oldid=602452976")
+
+      // Reopen the popup pointed at that same revision URL
+      await extensionPage.goto(
+        "chrome-extension://" +
+          extensionId +
+          "/popup/wikipedia_time_travel.html?testUrl=" +
+          encodeURIComponent(revisionUrl)
+      )
+
+      let noticeText = ""
+      do {
+        noticeText = await extensionPage.$eval("#viewing-date-notice", (el) => el.innerText)
+      } while (noticeText === "")
+
+      expect(noticeText).toBe("🕰️ Currently showing page on April 7, 2014")
+    }, timeout = 60000)
+
+    test("reopening the popup on today's revision does not show the reminder, since that is simply the current version", async () => {
+      // Wait for the popup to finish loading, so the date picker's min/max and the
+      // Go button's enabling logic are wired up
+      let articleName = ""
+      do {
+        articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleName === "")
+
+      // Jump to today's date, the date picker's max value
+      await extensionPage.$eval("#date-picker", (el) => {
+        el.value = el.max
+        el.dispatchEvent(new Event("input", { bubbles: true }))
+      })
+      await Promise.all([
+        extensionPage.waitForNavigation(),
+        extensionPage.click("#submit-button"),
+      ])
+      const revisionUrl = extensionPage.url()
+      expect(revisionUrl).toContain("oldid=")
+
+      // Reopen the popup pointed at that same revision URL
+      await extensionPage.goto(
+        "chrome-extension://" +
+          extensionId +
+          "/popup/wikipedia_time_travel.html?testUrl=" +
+          encodeURIComponent(revisionUrl)
+      )
+
+      let articleNameOnReopen = ""
+      do {
+        articleNameOnReopen = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleNameOnReopen === "")
+
+      // Give the storage lookup a moment to resolve, then confirm the reminder stayed hidden
+      await waitFor(500)
+      const noticeIsHidden = await extensionPage.$eval(
+        "#viewing-date-notice",
+        (el) => window.getComputedStyle(el).display === "none"
+      )
+      expect(noticeIsHidden).toBe(true)
+    }, timeout = 60000)
+  })
+
+  describe("Immediate popup feedback after a jump, for the URL https://en.wikipedia.org/wiki/Earth", () => {
+
+    /* Setup: stub chrome.tabs.update so the click handler's own logic (remember the date,
+       update the notice) can be observed without racing the real tab navigation it triggers —
+       in a real popup that update targets a separate tab and never tears down the popup itself,
+       but in this test harness the popup page doubles as "the tab". */
+    beforeEach(async () => {
+      browser = await getBrowser("en-US")
+      extensionId = await getExtensionId(browser)
+      extensionPage = await browser.newPage()
+      await extensionPage.evaluateOnNewDocument(() => {
+        chrome.tabs.update = () => {}
+      })
+      await extensionPage.goto(
+        "chrome-extension://" +
+          extensionId +
+          "/popup/wikipedia_time_travel.html?testUrl=" +
+          WIKIPEDIA_PAGE_EARTH
+      )
+      await (await browser.pages())[0].close() // Close the first empty tab
+    }, (timeout = 60000))
+
+    test("clicking Go shows the notice in the popup immediately, without needing to reopen it", async () => {
+      let articleName = ""
+      do {
+        articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleName === "")
+
+      await extensionPage.$eval("#date-picker", (el) => {
+        el.value = "2014-04-07"
+        el.dispatchEvent(new Event("input", { bubbles: true }))
+      })
+      await extensionPage.click("#submit-button")
+
+      let noticeText = ""
+      do {
+        noticeText = await extensionPage.$eval("#viewing-date-notice", (el) => el.innerText)
+      } while (noticeText === "")
+
+      expect(noticeText).toBe("🕰️ Currently showing page on April 7, 2014")
+    }, timeout = 60000)
+
+    test("the quick jump is relative to the currently shown date, not always today", async () => {
+      let articleName = ""
+      do {
+        articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleName === "")
+
+      // Jump to 22 August 2025 via the exact date picker
+      await extensionPage.$eval("#date-picker", (el) => {
+        el.value = "2025-08-22"
+        el.dispatchEvent(new Event("input", { bubbles: true }))
+      })
+      await extensionPage.click("#submit-button")
+
+      let firstNoticeText = ""
+      do {
+        firstNoticeText = await extensionPage.$eval("#viewing-date-notice", (el) => el.innerText)
+      } while (firstNoticeText === "")
+      expect(firstNoticeText).toBe("🕰️ Currently showing page on August 22, 2025")
+
+      // The default "1 year ago" quick jump should now be relative to 22 August 2025,
+      // not to today
+      await extensionPage.click("#relative-go-button")
+
+      let secondNoticeText = firstNoticeText
+      do {
+        secondNoticeText = await extensionPage.$eval("#viewing-date-notice", (el) => el.innerText)
+      } while (secondNoticeText === firstNoticeText)
+
+      expect(secondNoticeText).toBe("🕰️ Currently showing page on August 22, 2024")
+    }, timeout = 60000)
   })
 
   describe("During loading state for the URL https://en.wikipedia.org/wiki/Earth", () => {
@@ -302,10 +489,16 @@ describe("Chrome Extension Popup Test", () => {
 
       const formBodyDisplayStyle = await extensionPage.$eval("#form-body", (el) => el.style.display)
 
+      const noticeIsHidden = await extensionPage.$eval(
+        "#viewing-date-notice",
+        (el) => window.getComputedStyle(el).display === "none"
+      )
+
       expect(placeholderMessageDisplayStyle).not.toBe("none")
       expect(articleNameText).toBe("")
       expect(articleCreationDateText).toBe("")
       expect(formBodyDisplayStyle).toBe("")
+      expect(noticeIsHidden).toBe(true)
     }, timeout = 60000)
   })
 

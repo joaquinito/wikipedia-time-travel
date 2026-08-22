@@ -51,19 +51,42 @@
           </svg>
           <div id="article-creation-date"></div>
         </div>
+        <div id="viewing-date-notice" hidden></div>
       </div>
 
       <div id="form-body" hidden>
-        <label id="date-picker-label" for="date-picker">Open this page on</label>
-        <input type="date" id="date-picker">
-        <button id="submit-button">
-          <span class="button-label">Go</span>
-          <svg class="button-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"
-               fill="none" stroke="currentColor" stroke-width="2"
-               stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"/>
-          </svg>
-        </button>
+        <label class="panel-section-label">Quick jump</label>
+        <div class="panel-row">
+          <input type="number" id="relative-amount" class="quick-edit-input" min="1" max="999" value="1">
+          <select id="relative-unit" class="quick-edit-select">
+            <option value="days">day(s)</option>
+            <option value="weeks">week(s)</option>
+            <option value="months">month(s)</option>
+            <option value="years" selected>year(s)</option>
+          </select>
+          <span class="quick-edit-suffix">ago</span>
+          <button id="relative-go-button" class="icon-go-button" aria-label="Go">
+            <svg class="button-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="panel-divider"></div>
+
+        <label id="date-picker-label" class="panel-section-label" for="date-picker">Or pick an exact date</label>
+        <div class="panel-row">
+          <input type="date" id="date-picker" class="date-input">
+          <button id="submit-button" class="icon-go-button" aria-label="Go">
+            <svg class="button-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
     </div>
