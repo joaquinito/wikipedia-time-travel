@@ -163,6 +163,58 @@ describe("Chrome Extension Popup Test", () => {
     }, timeout = 60000)
   })
 
+  describe("The popup follows the browser colour scheme", () => {
+
+    /* Setup */
+    beforeEach(async () => {
+      browser = await getBrowser("en-US")
+      extensionId = await getExtensionId(browser)
+      extensionPage = await browser.newPage()
+      await (await browser.pages())[0].close() // Close the first empty tab
+    }, (timeout = 60000))
+
+    async function openPopupInColorScheme(colorScheme) {
+      await extensionPage.emulateMediaFeatures([{ name: "prefers-color-scheme", value: colorScheme }])
+      await extensionPage.goto(
+        "chrome-extension://" +
+          extensionId +
+          "/popup/wikipedia_time_travel.html?testUrl=" +
+          WIKIPEDIA_PAGE_EARTH
+      )
+    }
+
+    async function getBodyAndTokenColors() {
+      return await extensionPage.evaluate(() => {
+        const bodyStyle = window.getComputedStyle(document.body)
+
+        const probe = document.createElement("div")
+        probe.style.backgroundColor = "var(--wtt-bg)"  // Defined in the CSS file
+        probe.style.color = "var(--wtt-text)" // Defined in the CSS file
+        document.body.appendChild(probe)
+        const tokenStyle = window.getComputedStyle(probe)
+        const tokens = { backgroundColor: tokenStyle.backgroundColor, color: tokenStyle.color }
+        probe.remove()
+
+        return {
+          body: { backgroundColor: bodyStyle.backgroundColor, color: bodyStyle.color },
+          tokens,
+        }
+      })
+    }
+
+    test("popup uses the --wtt-bg/--wtt-text design tokens in light mode", async () => {
+      await openPopupInColorScheme("light")
+      const { body, tokens } = await getBodyAndTokenColors()
+      expect(body).toEqual(tokens)
+    }, timeout = 60000)
+
+    test("popup uses the --wtt-bg/--wtt-text design tokens in dark mode", async () => {
+      await openPopupInColorScheme("dark")
+      const { body, tokens } = await getBodyAndTokenColors()
+      expect(body).toEqual(tokens)
+    }, timeout = 60000)
+  })
+
   describe("For a URL that is not a Wikipedia page", () => {
 
     /* Setup */

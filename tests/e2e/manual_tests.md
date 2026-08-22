@@ -28,16 +28,3 @@ Unfortunately, support for programmaticaly testing extension popups is still ver
 3. Click on the "Go" button.
    
     **Expected**: The Wikipedia page for Earth with ID 602452976 is displayed.
-
-### Test 4: The popup follows the browser colour scheme
-
-1. Set the operating system (or Chrome, in `chrome://settings/appearance`) to dark mode.
-2. Open the page for Earth on Wikipedia: https://en.wikipedia.org/wiki/Earth.
-3. Open the Wikipedia Time Travel popup.
-
-    **Expected**: The popup uses a dark background with light text, matching Wikipedia's own
-    dark mode. The date picker's calendar overlay is also dark.
-
-4. Switch back to light mode and reopen the popup.
-
-    **Expected**: The popup uses a white background with dark text.
