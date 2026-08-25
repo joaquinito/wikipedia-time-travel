@@ -149,7 +149,7 @@ describe("Chrome Extension Popup Test", () => {
 
       // Clicking "Go" navigates the current tab (this same popup page) to the old revision
       await Promise.all([
-        extensionPage.waitForNavigation(),
+        extensionPage.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }),
         extensionPage.click("#submit-button"),
       ])
 
@@ -171,7 +171,7 @@ describe("Chrome Extension Popup Test", () => {
       // Clicking the quick jump Go button navigates the current tab to the old revision,
       // without requiring the exact date picker to be touched first
       await Promise.all([
-        extensionPage.waitForNavigation(),
+        extensionPage.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }),
         extensionPage.click("#relative-go-button"),
       ])
 
@@ -192,7 +192,7 @@ describe("Chrome Extension Popup Test", () => {
         el.dispatchEvent(new Event("input", { bubbles: true }))
       })
       await Promise.all([
-        extensionPage.waitForNavigation(),
+        extensionPage.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }),
         extensionPage.click("#submit-button"),
       ])
       const revisionUrl = extensionPage.url()
@@ -212,7 +212,7 @@ describe("Chrome Extension Popup Test", () => {
       } while (noticeText === "")
 
       expect(noticeText).toBe("🕰️ Currently showing page on April 7, 2014")
-    }, timeout = 60000)
+    }, timeout = 90000)
 
     test("reopening the popup on today's revision does not show the reminder, since that is simply the current version", async () => {
       // Wait for the popup to finish loading, so the date picker's min/max and the
@@ -228,7 +228,7 @@ describe("Chrome Extension Popup Test", () => {
         el.dispatchEvent(new Event("input", { bubbles: true }))
       })
       await Promise.all([
-        extensionPage.waitForNavigation(),
+        extensionPage.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }),
         extensionPage.click("#submit-button"),
       ])
       const revisionUrl = extensionPage.url()
@@ -254,7 +254,7 @@ describe("Chrome Extension Popup Test", () => {
         (el) => window.getComputedStyle(el).display === "none"
       )
       expect(noticeIsHidden).toBe(true)
-    }, timeout = 60000)
+    }, timeout = 90000)
   })
 
   describe("Immediate popup feedback after a jump, for the URL https://en.wikipedia.org/wiki/Earth", () => {
@@ -297,7 +297,7 @@ describe("Chrome Extension Popup Test", () => {
       } while (noticeText === "")
 
       expect(noticeText).toBe("🕰️ Currently showing page on April 7, 2014")
-    }, timeout = 60000)
+    }, timeout = 90000)
 
     test("the quick jump is relative to the currently shown date, not always today", async () => {
       let articleName = ""
@@ -328,7 +328,7 @@ describe("Chrome Extension Popup Test", () => {
       } while (secondNoticeText === firstNoticeText)
 
       expect(secondNoticeText).toBe("🕰️ Currently showing page on August 22, 2024")
-    }, timeout = 60000)
+    }, timeout = 90000)
   })
 
   describe("During loading state for the URL https://en.wikipedia.org/wiki/Earth", () => {

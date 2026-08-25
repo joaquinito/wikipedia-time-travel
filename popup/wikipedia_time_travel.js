@@ -13,6 +13,12 @@ const MEDIAWIKI_API_GET_REVISION =
 const MEDIAWIKI_API_GET_FIRST_REVISION =
   ".wikipedia.org/w/api.php?action=query&format=json&prop=revisions&formatversion=2&rvlimit=1&rvprop=timestamp%7Cids&origin=*&rvdir=newer"
 
+// Browser fetch() cannot set the User-Agent header itself, so identify via the header
+// MediaWiki's API etiquette recommends instead: https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy
+const API_REQUEST_HEADERS = {
+  "Api-User-Agent": "WikipediaTimeTravel/1.0 (https://github.com/joaquinito/wikipedia-time-travel)",
+}
+
 
 /**
  * Get the URL of the currently active tab
@@ -90,7 +96,8 @@ async function getWikipediaPageName(url) {
           getPageLanguage(url) +
           MEDIAWIKI_API_QUERY +
           "&revids=" +
-          queryParams.get("oldid")
+          queryParams.get("oldid"),
+        { headers: API_REQUEST_HEADERS }
       )
       const data = await response.json()
       const pageId = Object.keys(data.query.pages)
@@ -159,7 +166,8 @@ async function getCreationDate(pageName, language) {
         language +
         MEDIAWIKI_API_GET_FIRST_REVISION +
         "&titles=" +
-        pageName.replace(/ /g, "_")
+        pageName.replace(/ /g, "_"),
+      { headers: API_REQUEST_HEADERS }
     )
     var data = await response.json()
   } catch (error) {
@@ -256,7 +264,8 @@ async function openPageInSelectedDate(pageName, language, date) {
         pageName.replace(/ /g, "_") +
         "&rvstart=" +
         date +
-        "T23%3A59%3A59.999Z"
+        "T23%3A59%3A59.999Z",
+      { headers: API_REQUEST_HEADERS }
     )
     var data = await response.json()
   } catch (error) {
