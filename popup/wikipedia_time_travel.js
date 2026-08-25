@@ -409,7 +409,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const revId = getRevisionIdFromUrl(currentUrl)
     if (revId) {
       const rememberedDate = await recallFetchedDate(revId)
-      if (rememberedDate) displayFetchedDateNotice(rememberedDate)
+      if (rememberedDate) {
+        displayFetchedDateNotice(rememberedDate)
+        datePicker.value = rememberedDate
+      }
     }
 
   } else {

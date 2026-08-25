@@ -213,6 +213,9 @@ describe("Chrome Extension Popup Test", () => {
       } while (noticeText === "")
 
       expect(noticeText).toBe("Currently showing page on April 7, 2014")
+
+      const datePickerValue = await extensionPage.$eval("#date-picker", (el) => el.value)
+      expect(datePickerValue).toBe("2014-04-07")
     }, timeout = 90000)
 
     test("reopening the popup on today's revision does not show the reminder, since that is simply the current version", async () => {
