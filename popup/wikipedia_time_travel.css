@@ -121,7 +121,7 @@ body {
 
 #viewing-date-notice {
   margin-top: 6px;
-  color: var(--wtt-accent);
+  color: var(--wtt-text);
   font-size: 12.5px;
   font-weight: bold;
 }
@@ -150,6 +150,21 @@ body {
   margin-top: 3px;
   color: var(--wtt-text-subtle);
   font-size: 12.5px;
+}
+
+/* Shown while waiting for a revision jump to finish navigating the tab */
+#jump-status {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background-color: var(--wtt-bg-subtle);
+  border: 1px solid var(--wtt-border);
+  border-radius: var(--wtt-radius);
+  color: var(--wtt-text-subtle);
+  font-size: 12.5px;
+}
+
+#jump-status.is-error {
+  color: var(--wtt-text);
 }
 
 /* Keep the clock glyph out of the way until there is a date to label */
@@ -308,12 +323,6 @@ body {
   border: 1px solid var(--wtt-border);
   border-radius: var(--wtt-radius);
   color: var(--wtt-text-subtle);
-}
-
-.placeholder-icon {
-  display: block;
-  margin: 0 auto 8px;
-  color: var(--wtt-border-strong);
 }
 
 .placeholder-text {

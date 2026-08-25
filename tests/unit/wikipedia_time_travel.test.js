@@ -6,13 +6,13 @@ const {
   getCreationDate,
   getRelativeDateString,
   getRevisionIdFromUrl,
-  formatDateForDisplay
+  formatDateForDisplay,
+  setJumpStatus
 } = require("../../popup/wikipedia_time_travel")
 
 const fetchMock = require('jest-fetch-mock');
 fetchMock.enableMocks();
 
-// Tests for isWikipediaPage()
 describe("Function isWikipediaArticle() ", () => {
 
   test("returns true for regular Wikipedia article URLs (/wiki/<article_name>)", () => {
@@ -32,7 +32,6 @@ describe("Function isWikipediaArticle() ", () => {
   })
 })
 
-// Tests for getWikipediaPageName()
 describe("Function getWikipediaPageName() ", () => {
 
   beforeEach(() => {
@@ -75,7 +74,6 @@ describe("Function getWikipediaPageName() ", () => {
 })
 
 
-// Tests for getPageLanguage()
 describe("Function getPageLanguage() ", () => {
 
   test("returns the language code of the Wikipedia page", () => {
@@ -83,7 +81,6 @@ describe("Function getPageLanguage() ", () => {
   })
 })
 
-// Tests for getCreationDate()
 describe("Function getCreationDate() ", () => {
    
   beforeEach(() => {
@@ -116,8 +113,6 @@ describe("Function getCreationDate() ", () => {
 
 })
 
-
-// Tests for isSelectedDateValid()
 describe("Function isSelectedDateValid() ", () => {
 
   test("returns true if the selected date is between input.min and current date", () => {
@@ -162,7 +157,6 @@ describe("Function isSelectedDateValid() ", () => {
 
 })
 
-// Tests for getRelativeDateString()
 describe("Function getRelativeDateString() ", () => {
 
   function isoDaysAgo(days) {
@@ -248,5 +242,35 @@ describe("Function formatDateForDisplay() ", () => {
   test("falls back to day/month/year order for a non-English browser locale", () => {
     Object.defineProperty(navigator, "language", { value: "pt-PT", configurable: true })
     expect(formatDateForDisplay("2020-07-10")).toBe("10 July 2020")
+  })
+})
+
+describe("Function setJumpStatus() ", () => {
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="jump-status" hidden></div>'
+  })
+
+  test("shows the message and un-hides the status line", () => {
+    setJumpStatus("Loading previous version of the page...")
+
+    const status = document.getElementById("jump-status")
+    expect(status.textContent).toBe("Loading previous version of the page...")
+    expect(status.hidden).toBe(false)
+    expect(status.classList.contains("is-error")).toBe(false)
+  })
+
+  test("hides the status line and clears its text when passed null", () => {
+    setJumpStatus("Loading previous version of the page...")
+    setJumpStatus(null)
+
+    const status = document.getElementById("jump-status")
+    expect(status.hidden).toBe(true)
+    expect(status.textContent).toBe("")
+  })
+
+  test("marks the message as an error when isError is true", () => {
+    setJumpStatus("Could not load that revision.", true)
+    expect(document.getElementById("jump-status").classList.contains("is-error")).toBe(true)
   })
 })

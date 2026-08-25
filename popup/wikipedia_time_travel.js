@@ -6,6 +6,10 @@ const ENGLISH_LOCALE_CODES = ["en", "en-AU", "en-BZ", "en-CA", "en-GB", "en-HK",
 // relative to it instead of always relative to today
 let currentlyShownDate = null
 
+// Id of the tab this popup is acting on, so a jump can wait for that specific
+// tab's navigation to finish loading before clearing its own status message
+let currentTabId = null
+
 const MEDIAWIKI_INDEX_ENDPOINT = ".wikipedia.org/w/index.php?"
 const MEDIAWIKI_API_QUERY = ".wikipedia.org/w/api.php?action=query&prop=info&format=json&origin=*"
 const MEDIAWIKI_API_GET_REVISION =
@@ -21,14 +25,13 @@ const API_REQUEST_HEADERS = {
 
 
 /**
- * Get the URL of the currently active tab
- * @returns {string} - URL of the currently active tab
+ * Get the currently active tab
+ * @returns {Promise<object>} - The active tab
  */
-function getCurrentTabUrl() {
+function getCurrentTab() {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const currentTab = tabs[0]
-      resolve(currentTab.url)
+      resolve(tabs[0])
     })
   })
 }
@@ -243,13 +246,74 @@ function displayFetchedDateNotice(date) {
   if (date === today) return
 
   document.getElementById("viewing-date-notice").textContent =
-    "🕰️ Currently showing page on " + formatDateForDisplay(date)
+    "Currently showing page on " + formatDateForDisplay(date)
   document.getElementById("viewing-date-notice").style.display = "block"
+}
+
+/**
+ * Hide the "Currently showing page on <date>" notice, e.g. while a new jump
+ * is in flight and its own status message is showing instead.
+ */
+function hideFetchedDateNotice() {
+  document.getElementById("viewing-date-notice").style.display = "none"
+}
+
+/**
+ * Show or hide the status line displayed while a revision jump is in flight.
+ * The Wikipedia navigation this precedes can itself take several seconds on
+ * uncached old revisions, so this is purely to reassure the user the click
+ * registered rather than to reflect our own (fast) API calls.
+ * Mutually exclusive with the "Currently showing page on" notice: only one
+ * of the two is ever visible at a time.
+ * @param {string|null} message - Text to show, or null to hide the status line
+ * @param {boolean} [isError] - Whether to style the message as an error
+ */
+function setJumpStatus(message, isError = false) {
+  const status = document.getElementById("jump-status")
+  status.textContent = message || ""
+  status.hidden = !message
+  status.classList.toggle("is-error", isError)
+}
+
+/**
+ * Navigate a tab to a URL, resolving only once that tab has actually finished
+ * loading it. chrome.tabs.update()'s own callback fires as soon as the
+ * navigation is *requested*, not once the new page has rendered — and
+ * MediaWiki's old-revision renders can take several seconds on a cache miss,
+ * so callers that show a "loading" status need this to know when to clear it.
+ * @param {number|null} tabId - Id of the tab to navigate, or null if there is no real tab (e.g. tests)
+ * @param {string} url - URL to navigate the tab to
+ * @returns {Promise<void>}
+ */
+function navigateTabAndWaitForLoad(tabId, url) {
+  return new Promise((resolve) => {
+    if (!tabId) {
+      chrome.tabs.update({ url })
+      resolve()
+      return
+    }
+
+    function onTabUpdated(updatedTabId, changeInfo) {
+      if (updatedTabId === tabId && changeInfo.status === "complete") {
+        chrome.tabs.onUpdated.removeListener(onTabUpdated)
+        resolve()
+      }
+    }
+    chrome.tabs.onUpdated.addListener(onTabUpdated)
+    chrome.tabs.update(tabId, { url })
+  })
 }
 
 /**
  * Redirect current tab to the Wikipedia page revision that was most recent in
  * at the end of the selected date.
+ *
+ * Note: the navigation this triggers can take several seconds on its own, before
+ * this function even returns. Old revisions aren't cached by Wikipedia the way
+ * current pages are, so the first time anyone re-visits one, MediaWiki has to
+ * fully re-parse it (templates, infoboxes, etc.) rather than serving it from
+ * cache. There's nothing to optimize on our end here — it's Wikipedia's server,
+ * not this fetch, and it gets fast again once that revision is cached.
  * @param {string} pageName - Name of the Wikipedia page
  * * @param {string} language - Language code of the Wikipedia page (e.g. "en", "es")
  * @param {string} date - Date in the format "YYYY-MM-DD"
@@ -276,11 +340,35 @@ async function openPageInSelectedDate(pageName, language, date) {
   const revId = data.query.pages[0].revisions[0].revid
   // Remember the requested date, so a later visit to this revision can show it again
   rememberFetchedDate(revId, date)
-  // Update the popup's own notice right away, without waiting for it to be reopened
-  displayFetchedDateNotice(date)
-  // Open corresponding revision page in current tab
+  // Open corresponding revision page in current tab, and wait for it to actually finish loading
   const oldPageUrl = "https://" + language + MEDIAWIKI_INDEX_ENDPOINT + "&oldid=" + revId
-  chrome.tabs.update({ url: oldPageUrl })
+  await navigateTabAndWaitForLoad(currentTabId, oldPageUrl)
+  // Only now update the popup's own notice, so it never overlaps with the loading status
+  displayFetchedDateNotice(date)
+}
+
+/**
+ * Handle a click on either "Go" button: show the loading status, disable the
+ * button that triggered it until the navigation actually finishes, and fall
+ * back to an inline error message if the jump fails.
+ * @param {HTMLButtonElement} button - The button that triggered this jump
+ * @param {string} pageName - Name of the Wikipedia page
+ * @param {string} language - Language code of the Wikipedia page (e.g. "en", "es")
+ * @param {string} date - Date in the format "YYYY-MM-DD"
+ */
+async function jumpToDate(button, pageName, language, date) {
+  button.disabled = true
+  hideFetchedDateNotice()
+  setJumpStatus("Loading previous version of the page...")
+  try {
+    await openPageInSelectedDate(pageName, language, date)
+    setJumpStatus(null)
+  } catch (error) {
+    console.error("Error jumping to revision:", error)
+    setJumpStatus("⚠️ Could not load that revision. Please try again.", true)
+  } finally {
+    button.disabled = false
+  }
 }
 
 /**
@@ -300,8 +388,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const URL_PARAMS = new URLSearchParams(window.location.search)
   const testParam = URL_PARAMS.get("testUrl")
 
-  // Get the URL of the current tab (or use the test URL if provided)
-  const currentUrl = (testParam === null ? await getCurrentTabUrl() : testParam)
+  // Get the current tab (or use the test URL if provided, in which case there is no real tab)
+  const currentTab = testParam === null ? await getCurrentTab() : null
+  currentTabId = currentTab ? currentTab.id : null
+  const currentUrl = currentTab ? currentTab.url : testParam
 
   var wikipediaPageName = ""
   var wikipediaPageLanguage = ""
@@ -338,7 +428,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Open the revision when the submit button is clicked
   submitButton.addEventListener("click", async () => {
     const inputDate = document.getElementById("date-picker").value
-    await openPageInSelectedDate(wikipediaPageName, wikipediaPageLanguage, inputDate)
+    await jumpToDate(submitButton, wikipediaPageName, wikipediaPageLanguage, inputDate)
   })
 
   // Open the revision closest to N days/weeks/months/years before the currently shown date
@@ -350,7 +440,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       datePicker.min,
       currentlyShownDate
     )
-    await openPageInSelectedDate(wikipediaPageName, wikipediaPageLanguage, targetDate)
+    await jumpToDate(relativeGoButton, wikipediaPageName, wikipediaPageLanguage, targetDate)
   })
 })
 
@@ -365,5 +455,6 @@ if (typeof module !== "undefined" && module.exports) {
     getRelativeDateString,
     getRevisionIdFromUrl,
     formatDateForDisplay,
+    setJumpStatus,
   }
 }

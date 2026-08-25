@@ -212,7 +212,7 @@ describe("Chrome Extension Popup Test", () => {
         noticeText = await extensionPage.$eval("#viewing-date-notice", (el) => el.innerText)
       } while (noticeText === "")
 
-      expect(noticeText).toBe("🕰️ Currently showing page on April 7, 2014")
+      expect(noticeText).toBe("Currently showing page on April 7, 2014")
     }, timeout = 90000)
 
     test("reopening the popup on today's revision does not show the reminder, since that is simply the current version", async () => {
@@ -297,7 +297,7 @@ describe("Chrome Extension Popup Test", () => {
         noticeText = await extensionPage.$eval("#viewing-date-notice", (el) => el.innerText)
       } while (noticeText === "")
 
-      expect(noticeText).toBe("🕰️ Currently showing page on April 7, 2014")
+      expect(noticeText).toBe("Currently showing page on April 7, 2014")
     }, timeout = 90000)
 
     test("the quick jump is relative to the currently shown date, not always today", async () => {
@@ -317,7 +317,7 @@ describe("Chrome Extension Popup Test", () => {
       do {
         firstNoticeText = await extensionPage.$eval("#viewing-date-notice", (el) => el.innerText)
       } while (firstNoticeText === "")
-      expect(firstNoticeText).toBe("🕰️ Currently showing page on August 22, 2025")
+      expect(firstNoticeText).toBe("Currently showing page on August 22, 2025")
 
       // The default "1 year ago" quick jump should now be relative to 22 August 2025,
       // not to today
@@ -328,7 +328,7 @@ describe("Chrome Extension Popup Test", () => {
         secondNoticeText = await extensionPage.$eval("#viewing-date-notice", (el) => el.innerText)
       } while (secondNoticeText === firstNoticeText)
 
-      expect(secondNoticeText).toBe("🕰️ Currently showing page on August 22, 2024")
+      expect(secondNoticeText).toBe("Currently showing page on August 22, 2024")
     }, timeout = 90000)
   })
 
