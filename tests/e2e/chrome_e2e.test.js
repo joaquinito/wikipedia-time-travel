@@ -16,7 +16,7 @@ async function getBrowser(languageCode) {
 
   return await puppeteer.launch({
     headless: isCI, // run in headless mode on CI, don't run in headless mode on local
-    slowMo: 200,
+    slowMo: isCI ? 0 : 200, // only slow down actions for visual debugging locally
     args: isCI
       ? [
           "--no-sandbox",
@@ -34,8 +34,9 @@ async function getBrowser(languageCode) {
 
 async function getExtensionId(browser) {
   await browser.pages();
-  const targets = await browser.targets();
-  const backgroundPageTarget = targets.find(target => target.type() === 'service_worker');
+  const backgroundPageTarget = await browser.waitForTarget(
+    (target) => target.type() === 'service_worker'
+  );
   const backgroundPageUrl = backgroundPageTarget.url() || '';
   [, , extensionId] = backgroundPageUrl.split('/');
   return extensionId
