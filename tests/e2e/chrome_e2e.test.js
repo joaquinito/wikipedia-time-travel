@@ -52,6 +52,15 @@ describe("Chrome Extension Popup Test", () => {
     await browser.close()
   })
 
+  // Types digits into one of the exact-date spinner's day/month/year fields. The segment
+  // starts pre-filled (with today's date, or a remembered one), so the first digit typed
+  // replaces it rather than being inserted alongside it (see the "keydown" listener in
+  // setUpDateSpinner()).
+  async function typeIntoSegment(unit, digits) {
+    await extensionPage.click("#date-segment-" + unit)
+    await extensionPage.keyboard.type(digits)
+  }
+
   describe("For the URL https://en.wikipedia.org/wiki/Earth", () => {
 
     /* Setup */
@@ -100,7 +109,7 @@ describe("Chrome Extension Popup Test", () => {
       expect(articleCreationDateText).toBe("Page created on November 6, 2001")
     })
 
-     test("typing a valid date into the date picker enables the Go button", async () => {
+     test("typing a valid date into the day/month/year spinner enables the Go button", async () => {
       // Wait for the popup to finish loading, so the date picker's min/max and the
       // Go button's enabling logic are wired up
       let articleName = ""
@@ -114,13 +123,12 @@ describe("Chrome Extension Popup Test", () => {
       )
       expect(submitButtonWasDisabled).toBe(true)
 
-      // The date input's segment order (day/month vs month/day) depends on the browser's
-      // locale, so use a day/month pair that is valid, and within range, either way.
-      await extensionPage.click("#date-picker")
-      await extensionPage.keyboard.type("04072014")
+      await typeIntoSegment("year", "2014")
+      await typeIntoSegment("month", "04")
+      await typeIntoSegment("day", "07")
 
       const datePickerValue = await extensionPage.$eval("#date-picker", (el) => el.value)
-      expect(datePickerValue).not.toBe("")
+      expect(datePickerValue).toBe("2014-04-07")
 
       const submitButtonIsDisabled = await extensionPage.$eval(
         "#submit-button",
@@ -333,6 +341,130 @@ describe("Chrome Extension Popup Test", () => {
 
       expect(secondNoticeText).toBe("Currently showing page on August 22, 2024")
     }, timeout = 90000)
+  })
+
+  describe("The exact-date day/month/year spinner, for the URL https://en.wikipedia.org/wiki/Earth", () => {
+
+    async function openPopup(languageCode) {
+      browser = await getBrowser(languageCode)
+      extensionId = await getExtensionId(browser)
+      extensionPage = await browser.newPage()
+      await extensionPage.goto(
+        "chrome-extension://" +
+          extensionId +
+          "/popup/wikipedia_time_travel.html?testUrl=" +
+          WIKIPEDIA_PAGE_EARTH
+      )
+      await (await browser.pages())[0].close() // Close the first empty tab
+
+      let articleName = ""
+      do {
+        articleName = await extensionPage.$eval("#article-name", (el) => el.innerText)
+      } while (articleName === "")
+    }
+
+    beforeEach(async () => {
+      await openPopup("en-US")
+    }, (timeout = 60000))
+
+    test("the date is picked via a segmented day/month/year spinner, not a native date input", async () => {
+      const datePickerType = await extensionPage.$eval("#date-picker", (el) => el.type)
+      expect(datePickerType).toBe("hidden")
+
+      const spinnerSegmentCount = await extensionPage.$$eval(
+        ".date-segment-input",
+        (els) => els.length
+      )
+      expect(spinnerSegmentCount).toBe(3)
+    }, timeout = 60000)
+
+    test("the segments are ordered month, day, year for American English (mm/dd/yyyy)", async () => {
+      const order = await extensionPage.$$eval(".date-segment-input", (els) =>
+        els.map((el) => el.dataset.unit)
+      )
+      expect(order).toEqual(["month", "day", "year"])
+    }, timeout = 60000)
+
+    test("typing digits directly into each segment enables Go and navigates to that revision", async () => {
+      await typeIntoSegment("year", "2014")
+      await typeIntoSegment("month", "04")
+      await typeIntoSegment("day", "07")
+
+      const submitButtonIsDisabled = await extensionPage.$eval(
+        "#submit-button",
+        (el) => el.disabled
+      )
+      expect(submitButtonIsDisabled).toBe(false)
+
+      await Promise.all([
+        extensionPage.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }),
+        extensionPage.click("#submit-button"),
+      ])
+
+      expect(extensionPage.url()).toContain("oldid=602452976")
+    }, timeout = 60000)
+
+    test("the day input's own up/down arrows adjust just that part of the date, and Go navigates to the resulting revision", async () => {
+      await typeIntoSegment("year", "2014")
+      await typeIntoSegment("month", "04")
+      await typeIntoSegment("day", "08")
+
+      await extensionPage.focus("#date-segment-day")
+      await extensionPage.keyboard.press("ArrowDown")
+
+      const dayValue = await extensionPage.$eval("#date-segment-day", (el) => el.value)
+      expect(dayValue).toBe("7")
+
+      await Promise.all([
+        extensionPage.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }),
+        extensionPage.click("#submit-button"),
+      ])
+
+      expect(extensionPage.url()).toContain("oldid=602452976")
+    }, timeout = 60000)
+
+    test("increasing the month clamps a day that no longer fits the new month (e.g. March 31st to April)", async () => {
+      await typeIntoSegment("year", "2014")
+      await typeIntoSegment("month", "03")
+      await typeIntoSegment("day", "31")
+
+      await extensionPage.focus("#date-segment-month")
+      await extensionPage.keyboard.press("ArrowUp")
+
+      const monthValue = await extensionPage.$eval("#date-segment-month", (el) => el.value)
+      const dayValue = await extensionPage.$eval("#date-segment-day", (el) => el.value)
+      expect(monthValue).toBe("4")
+      expect(dayValue).toBe("30")
+    }, timeout = 60000)
+
+    test("a date before the page was created does not enable Go", async () => {
+      await typeIntoSegment("year", "1999")
+      await typeIntoSegment("month", "01")
+      await typeIntoSegment("day", "01")
+
+      const submitButtonIsDisabled = await extensionPage.$eval(
+        "#submit-button",
+        (el) => el.disabled
+      )
+      expect(submitButtonIsDisabled).toBe(true)
+    }, timeout = 60000)
+
+    describe("under a non-American browser locale (en-GB)", () => {
+
+      // The outer beforeEach already opened an "en-US" browser; close it before
+      // opening a fresh one under "en-GB", so it isn't leaked.
+      beforeEach(async () => {
+        await browser.close()
+        await openPopup("en-GB")
+      }, (timeout = 60000))
+
+      test("the segments are ordered day, month, year (dd/mm/yyyy)", async () => {
+        const order = await extensionPage.$$eval(".date-segment-input", (els) =>
+          els.map((el) => el.dataset.unit)
+        )
+        expect(order).toEqual(["day", "month", "year"])
+      }, timeout = 60000)
+    })
   })
 
   describe("During loading state for the URL https://en.wikipedia.org/wiki/Earth", () => {

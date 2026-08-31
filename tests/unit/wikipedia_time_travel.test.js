@@ -1,6 +1,10 @@
 const {
   isWikipediaPage,
   isSelectedDateValid,
+  getDateSegmentOrder,
+  daysInMonth,
+  parseDateParts,
+  formatDateParts,
   getPageLanguage,
   getWikipediaPageName,
   getCreationDate,
@@ -153,6 +157,91 @@ describe("Function isSelectedDateValid() ", () => {
       min: "2022-03-28T20:05:01.983Z"
     }
     expect(isSelectedDateValid(datePickerObj)).toBe(false)
+  })
+
+  test("returns false, without throwing, for a value that is not a well-formed date (e.g. free-typed text on the Firefox fallback)", () => {
+    const datePickerObj = {
+      value: "not-a-date",
+      min: "2003-01-01T20:05:01.983Z"
+    }
+    expect(() => isSelectedDateValid(datePickerObj)).not.toThrow()
+    expect(isSelectedDateValid(datePickerObj)).toBe(false)
+  })
+
+  test("returns false for a value in a different format than YYYY-MM-DD", () => {
+    const datePickerObj = {
+      value: "04/07/2014",
+      min: "2003-01-01T20:05:01.983Z"
+    }
+    expect(isSelectedDateValid(datePickerObj)).toBe(false)
+  })
+
+})
+
+describe("Function getDateSegmentOrder() ", () => {
+
+  test("puts the month before the day for American English (mm/dd/yyyy)", () => {
+    expect(getDateSegmentOrder("en-US")).toEqual(["month", "day", "year"])
+  })
+
+  test("puts the day before the month for every other locale (dd/mm/yyyy)", () => {
+    expect(getDateSegmentOrder("en-GB")).toEqual(["day", "month", "year"])
+    expect(getDateSegmentOrder("pt-PT")).toEqual(["day", "month", "year"])
+    expect(getDateSegmentOrder("es-ES")).toEqual(["day", "month", "year"])
+    expect(getDateSegmentOrder("en")).toEqual(["day", "month", "year"])
+  })
+
+})
+
+describe("Function daysInMonth() ", () => {
+
+  test("returns 31 for a 31-day month", () => {
+    expect(daysInMonth(2014, 1)).toBe(31)
+  })
+
+  test("returns 30 for a 30-day month", () => {
+    expect(daysInMonth(2014, 4)).toBe(30)
+  })
+
+  test("returns 29 for February in a leap year", () => {
+    expect(daysInMonth(2024, 2)).toBe(29)
+  })
+
+  test("returns 28 for February in a non-leap year", () => {
+    expect(daysInMonth(2023, 2)).toBe(28)
+  })
+
+})
+
+describe("Function parseDateParts() ", () => {
+
+  test("parses a well-formed YYYY-MM-DD string", () => {
+    expect(parseDateParts("2014-04-07")).toEqual({ year: 2014, month: 4, day: 7 })
+  })
+
+  test("returns null for an empty string", () => {
+    expect(parseDateParts("")).toBe(null)
+  })
+
+  test("returns null for a malformed value, without throwing", () => {
+    expect(() => parseDateParts("not-a-date")).not.toThrow()
+    expect(parseDateParts("not-a-date")).toBe(null)
+  })
+
+  test("returns null for a value in a different format", () => {
+    expect(parseDateParts("04/07/2014")).toBe(null)
+  })
+
+})
+
+describe("Function formatDateParts() ", () => {
+
+  test("formats numeric parts as a zero-padded YYYY-MM-DD string", () => {
+    expect(formatDateParts({ year: 2014, month: 4, day: 7 })).toBe("2014-04-07")
+  })
+
+  test("does not add extra padding when the parts are already two digits", () => {
+    expect(formatDateParts({ year: 2014, month: 12, day: 31 })).toBe("2014-12-31")
   })
 
 })

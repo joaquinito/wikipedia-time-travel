@@ -60,16 +60,72 @@ function getPageLanguage(url) {
 }
 
 /**
- * Check if the selected date is valid (between the creation date and today)
- * @param {object} datePicker - HTML input of type="date"
+ * Check if the selected date is valid (in "YYYY-MM-DD" format, and between the
+ * creation date and today). The canonical #date-picker value is only ever set by our
+ * own code (from the day/month/year spinner, or from a remembered date recalled from
+ * storage), but that stored value isn't guaranteed to still be well-formed, so this
+ * guards against a malformed value rather than assuming one.
+ * @param {object} datePicker - HTML input holding the canonical "YYYY-MM-DD" value
  * @returns {bool} - True if the selected date is valid, false otherwise
  */
 function isSelectedDateValid(datePicker) {
+  if (!/^\d{4}-\d{2}-\d{2}(T.*)?$/.test(datePicker.value)) return false
+
   const today = new Date().toISOString().split("T")[0]
   const selectedDate = new Date(datePicker.value).toISOString().split("T")[0]
   const creationDate = new Date(datePicker.min).toISOString().split("T")[0]
 
   return selectedDate >= creationDate && selectedDate <= today ? true : false
+}
+
+const AMERICAN_DATE_LOCALE = "en-US"
+
+/**
+ * Determine the order the day/month/year spinner segments should appear in, following
+ * the browser's locale. American English is the one common locale that puts the month
+ * before the day (mm/dd/yyyy); every other locale here uses dd/mm/yyyy.
+ * @param {string} locale - e.g. navigator.language
+ * @returns {string[]} - ["month", "day", "year"] or ["day", "month", "year"]
+ */
+function getDateSegmentOrder(locale) {
+  return locale === AMERICAN_DATE_LOCALE
+    ? ["month", "day", "year"]
+    : ["day", "month", "year"]
+}
+
+/**
+ * Number of days in a given month
+ * @param {number} year
+ * @param {number} month - 1-indexed (1 = January)
+ * @returns {number}
+ */
+function daysInMonth(year, month) {
+  return new Date(year, month, 0).getDate()
+}
+
+/**
+ * Parse a "YYYY-MM-DD" string into its numeric parts
+ * @param {string} dateString - Date in the format "YYYY-MM-DD"
+ * @returns {{year: number, month: number, day: number}|null} - null if not well-formed
+ */
+function parseDateParts(dateString) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString || "")
+  if (!match) return null
+  return {
+    year: parseInt(match[1], 10),
+    month: parseInt(match[2], 10),
+    day: parseInt(match[3], 10),
+  }
+}
+
+/**
+ * Format numeric date parts back into a "YYYY-MM-DD" string
+ * @param {{year: number, month: number, day: number}} parts
+ * @returns {string} - Date in the format "YYYY-MM-DD"
+ */
+function formatDateParts(parts) {
+  const pad = (n) => String(n).padStart(2, "0")
+  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`
 }
 
 /**
@@ -372,6 +428,129 @@ async function jumpToDate(button, pageName, language, date) {
 }
 
 /**
+ * Wire up a number input's custom up/down spinner buttons (see the .spinner-wrap markup
+ * around it) to call the input's own stepUp()/stepDown(), so they respect its min/max/step
+ * the same way its native arrows or the keyboard's up/down arrow keys would.
+ * @param {HTMLElement} wrap - The .spinner-wrap element containing the input and its buttons
+ */
+function attachSpinnerButtons(wrap) {
+  const input = wrap.querySelector("input[type=number]")
+
+  ;[
+    [wrap.querySelector(".spinner-btn-up"), () => input.stepUp()],
+    [wrap.querySelector(".spinner-btn-down"), () => input.stepDown()],
+  ].forEach(([button, adjust]) => {
+    // Prevent the button from stealing focus from the input on click, which would
+    // otherwise interrupt whatever the user was doing with it (e.g. mid-typing)
+    button.addEventListener("mousedown", (event) => event.preventDefault())
+    button.addEventListener("click", () => {
+      adjust()
+      input.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+  })
+}
+
+/**
+ * Wire up the exact-date spinner: order its day/month/year number inputs to match the
+ * browser's locale (see getDateSegmentOrder()), keep them in sync with the canonical
+ * (hidden) #date-picker input, and let each one be changed either by its custom up/down
+ * buttons (styled like the quick-jump amount field), the keyboard's up/down arrow keys,
+ * or by typing a value directly into it.
+ * @param {HTMLInputElement} datePicker - The canonical #date-picker input
+ * @param {string} locale - e.g. navigator.language
+ * @returns {function} - Re-renders the segments from datePicker.value; call after changing
+ *   that value programmatically elsewhere (e.g. pre-filling a remembered date)
+ */
+function setUpDateSpinner(datePicker, locale) {
+  const spinner = document.getElementById("date-picker-spinner")
+
+  const segmentInputs = {
+    day: document.getElementById("date-segment-day"),
+    month: document.getElementById("date-segment-month"),
+    year: document.getElementById("date-segment-year"),
+  }
+
+  // The .spinner-wrap around each input also holds its up/down buttons, so reordering
+  // must move that whole wrapper rather than just the bare input
+  const segmentWraps = {
+    day: document.querySelector('.spinner-wrap[data-unit="day"]'),
+    month: document.querySelector('.spinner-wrap[data-unit="month"]'),
+    year: document.querySelector('.spinner-wrap[data-unit="year"]'),
+  }
+
+  // Reorder the segments (and the "/" separators between them) to match the locale
+  const order = getDateSegmentOrder(locale)
+  order.forEach((unit, index) => {
+    spinner.appendChild(segmentWraps[unit])
+    if (index < order.length - 1) {
+      const separator = document.createElement("span")
+      separator.className = "date-segment-separator"
+      separator.textContent = "/"
+      spinner.appendChild(separator)
+    }
+  })
+
+  function currentParts() {
+    return (
+      parseDateParts(datePicker.value) ||
+      parseDateParts(new Date().toISOString().split("T")[0])
+    )
+  }
+
+  function render(parts) {
+    segmentInputs.day.value = parts.day
+    segmentInputs.month.value = parts.month
+    segmentInputs.year.value = parts.year
+    // The day's own max follows the selected month/year, so e.g. spinning the month
+    // from March to April clamps a day of 31 down to that month's last day
+    segmentInputs.day.max = daysInMonth(parts.year, parts.month)
+  }
+
+  function commit(parts) {
+    const clampedParts = { ...parts, day: Math.min(parts.day, daysInMonth(parts.year, parts.month)) }
+    render(clampedParts)
+    datePicker.value = formatDateParts(clampedParts)
+    datePicker.dispatchEvent(new Event("input", { bubbles: true }))
+  }
+
+  function sync() {
+    render(currentParts())
+  }
+
+  Object.entries(segmentInputs).forEach(([unit, input]) => {
+    // Number inputs don't support the text-selection APIs (select() throws for them), so
+    // there is no built-in way to highlight the pre-filled value for overwriting. Instead,
+    // mark the segment as "just focused" and only clear it lazily, right when the first
+    // digit is about to be typed — clearing on focus itself would also wipe the value
+    // right before an up/down arrow keypress, which should adjust it, not reset it.
+    input.addEventListener("focus", () => {
+      input.dataset.freshFocus = "true"
+    })
+
+    input.addEventListener("keydown", (event) => {
+      if (input.dataset.freshFocus !== "true") return
+      delete input.dataset.freshFocus
+      if (!/^[0-9]$/.test(event.key)) return
+      event.preventDefault()
+      input.value = event.key
+      input.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+
+    input.addEventListener("input", () => {
+      if (input.value === "") return
+      commit({ ...currentParts(), [unit]: parseInt(input.value, 10) })
+    })
+
+    input.addEventListener("blur", sync)
+  })
+
+  // Start on today's date, or whatever datePicker.value is already pre-filled with
+  commit(currentParts())
+
+  return sync
+}
+
+/**
  * Main function - runs when the popup is opened
  */
 document.addEventListener("DOMContentLoaded", async () => {
@@ -380,6 +559,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const relativeGoButton = document.getElementById("relative-go-button")
   const relativeAmountInput = document.getElementById("relative-amount")
   const relativeUnitSelect = document.getElementById("relative-unit")
+
+  document.querySelectorAll(".spinner-wrap").forEach(attachSpinnerButtons)
+
+  // The exact date is picked via a segmented day/month/year spinner rather than a native
+  // date input, so its look (and its up/down arrows, doubling as a mouse-only way to pick
+  // a date) is the same in every browser, instead of depending on the OS/browser's own
+  // date picker UI (Firefox's, in particular, can't even open its calendar popup here —
+  // a long-standing, unfixed upstream platform bug: the picker is itself an OS-level
+  // panel, and panels can't reliably spawn other panels from inside another panel).
+  const syncDateSpinner = setUpDateSpinner(datePicker, navigator.language)
 
   // Submit button is disabled by default
   submitButton.disabled = true
@@ -404,14 +593,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     wikipediaPageLanguage = getPageLanguage(currentUrl)
     displayWikipediaPageData(wikipediaPageName, wikipediaPageLanguage)
 
-    // If this revision was reached through this extension before, remind the user
-    // what date they last jumped to
+    // If this revision was reached through this extension before, display the requested date 
+    // and pre-fill the date picker with it
     const revId = getRevisionIdFromUrl(currentUrl)
     if (revId) {
       const rememberedDate = await recallFetchedDate(revId)
       if (rememberedDate) {
         displayFetchedDateNotice(rememberedDate)
         datePicker.value = rememberedDate
+        syncDateSpinner()
       }
     }
 
@@ -452,6 +642,10 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     isWikipediaPage,
     isSelectedDateValid,
+    getDateSegmentOrder,
+    daysInMonth,
+    parseDateParts,
+    formatDateParts,
     getPageLanguage,
     getWikipediaPageName,
     getCreationDate,

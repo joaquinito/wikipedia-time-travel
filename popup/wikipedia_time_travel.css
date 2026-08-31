@@ -207,8 +207,7 @@ body {
 }
 
 .quick-edit-input,
-.quick-edit-select,
-#date-picker {
+.quick-edit-select {
   box-sizing: border-box;
   padding: 6px 8px;
 
@@ -233,37 +232,116 @@ body {
   font-size: 13px;
 }
 
-#date-picker {
-  flex: 1;
-  width: 100%;
-}
-
 .quick-edit-suffix {
   color: var(--wtt-text-subtle);
   font-size: 13px;
 }
 
 .quick-edit-input:hover,
-.quick-edit-select:hover,
-#date-picker:hover {
+.quick-edit-select:hover {
   border-color: var(--wtt-text-subtle);
 }
 
 .quick-edit-input:focus,
-.quick-edit-select:focus,
-#date-picker:focus {
+.quick-edit-select:focus {
   outline: none;
   border-color: var(--wtt-accent);
   box-shadow: inset 0 0 0 1px var(--wtt-accent);
 }
 
-#date-picker::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.55;
+/* Custom mouse-only up/down spinner for number inputs. The native browser
+   spinner can't be made to behave the same way everywhere (Firefox shows it
+   permanently and has no hover-only mode for it; Chrome shows it only on
+   hover/focus), so it's hidden in both and replaced with our own
+   hover-revealed buttons that call stepUp()/stepDown() on the input
+   (see attachSpinnerButtons() in wikipedia_time_travel.js). */
+.quick-edit-input[type="number"] {
+  -moz-appearance: textfield;
 }
 
-#date-picker::-webkit-calendar-picker-indicator:hover {
+.quick-edit-input[type="number"]::-webkit-outer-spin-button,
+.quick-edit-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.spinner-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.spinner-buttons {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease;
+}
+
+.spinner-wrap:hover .spinner-buttons,
+.spinner-wrap:focus-within .spinner-buttons {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.spinner-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  background-color: var(--wtt-bg);
+  color: var(--wtt-text-subtle);
+  font-size: 7px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.spinner-btn:hover {
+  color: var(--wtt-text);
+  background-color: var(--wtt-border);
+}
+
+/* --------------------------------------------------------------------------
+   Exact date spinner — segmented day/month/year fields, ordered to match the
+   browser's locale (see getDateSegmentOrder() in wikipedia_time_travel.js).
+   Styled like the quick-jump amount field above, so its custom up/down
+   buttons double as the mouse-only way to pick a date.
+   -------------------------------------------------------------------------- */
+
+.date-spinner {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-segment-input {
+  width: 45px;
+  text-align: left;
+}
+
+.date-segment-input-year {
+  width: 60px;
+}
+
+.date-segment-separator {
+  color: var(--wtt-text-subtle);
+  font-size: 13px;
+}
+
+.panel-hint {
+  display: block;
+  margin-top: 4px;
+  color: var(--wtt-text-subtle);
+  font-size: 11.5px;
 }
 
 .icon-go-button {
