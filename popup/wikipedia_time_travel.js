@@ -23,6 +23,37 @@ const API_REQUEST_HEADERS = {
   "Api-User-Agent": "WikipediaTimeTravel/1.0 (https://github.com/joaquinito/wikipedia-time-travel)",
 }
 
+/**
+ * Fetch a URL and parse its JSON body, retrying a few times with a short backoff
+ * on a network error or a non-OK response. The MediaWiki API is normally fast and
+ * reliable, but a single transient failure (a dropped connection, a brief 429/503)
+ * would otherwise leave the popup stuck on its loading skeleton for good, since the
+ * callers below dereference the parsed body directly. A couple of quick retries make
+ * that path far more robust — noticeably so in CI, which hits the live API in bursts.
+ * @param {string} url - URL to fetch
+ * @param {object} [options] - fetch() options
+ * @param {number} [retries] - How many extra attempts to make after the first
+ * @returns {Promise<object>} - Parsed JSON body
+ */
+async function fetchJsonWithRetry(url, options = {}, retries = 3) {
+  let lastError
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt))
+    }
+    try {
+      const response = await fetch(url, options)
+      if (!response.ok) {
+        throw new Error("MediaWiki API responded with HTTP " + response.status)
+      }
+      return await response.json()
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError
+}
+
 
 /**
  * Get the currently active tab
@@ -150,7 +181,7 @@ async function getWikipediaPageName(url) {
     }
     if (queryParams.has("oldid")) {
       // If title is not present in the URL, get the title using the MediaWiki API
-      const response = await fetch(
+      const data = await fetchJsonWithRetry(
         "https://" +
           getPageLanguage(url) +
           MEDIAWIKI_API_QUERY +
@@ -158,7 +189,6 @@ async function getWikipediaPageName(url) {
           queryParams.get("oldid"),
         { headers: API_REQUEST_HEADERS }
       )
-      const data = await response.json()
       const pageId = Object.keys(data.query.pages)
       return data.query.pages[pageId].title
     }
@@ -219,19 +249,14 @@ function getRelativeDateString(amount, unit, minDate, referenceDate) {
  * @returns {string} - Date in the format "YYYY-MM-DD"
  */
 async function getCreationDate(pageName, language) {
-  try {
-    var response = await fetch(
-      "https://" +
-        language +
-        MEDIAWIKI_API_GET_FIRST_REVISION +
-        "&titles=" +
-        pageName.replace(/ /g, "_"),
-      { headers: API_REQUEST_HEADERS }
-    )
-    var data = await response.json()
-  } catch (error) {
-    console.error("Error fetching data:", error)
-  }
+  const data = await fetchJsonWithRetry(
+    "https://" +
+      language +
+      MEDIAWIKI_API_GET_FIRST_REVISION +
+      "&titles=" +
+      pageName.replace(/ /g, "_"),
+    { headers: API_REQUEST_HEADERS }
+  )
 
   const creation_timestamp = data.query.pages[0].revisions[0].timestamp
   return creation_timestamp.split("T")[0]
@@ -375,22 +400,17 @@ function navigateTabAndWaitForLoad(tabId, url) {
  * @param {string} date - Date in the format "YYYY-MM-DD"
  */
 async function openPageInSelectedDate(pageName, language, date) {
-  try {
-    var response = await fetch(
-      "https://" +
-        language +
-        MEDIAWIKI_API_GET_REVISION +
-        "&titles=" +
-        pageName.replace(/ /g, "_") +
-        "&rvstart=" +
-        date +
-        "T23%3A59%3A59.999Z",
-      { headers: API_REQUEST_HEADERS }
-    )
-    var data = await response.json()
-  } catch (error) {
-    console.error("Error fetching data:", error)
-  }
+  const data = await fetchJsonWithRetry(
+    "https://" +
+      language +
+      MEDIAWIKI_API_GET_REVISION +
+      "&titles=" +
+      pageName.replace(/ /g, "_") +
+      "&rvstart=" +
+      date +
+      "T23%3A59%3A59.999Z",
+    { headers: API_REQUEST_HEADERS }
+  )
 
   // Parse JSON response and extract the revid
   const revId = data.query.pages[0].revisions[0].revid

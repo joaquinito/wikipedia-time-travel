@@ -142,7 +142,7 @@ function definePopupTests(target) {
     /* Teardown */
     afterEach(async () => {
       await browser.close()
-    })
+    }, TEST_TIMEOUT_MS)
 
     // Types digits into one of the exact-date spinner's day/month/year fields. The segment
     // starts pre-filled (with today's date, or a remembered one), so the first digit typed
