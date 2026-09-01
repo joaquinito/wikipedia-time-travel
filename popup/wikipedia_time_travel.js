@@ -331,7 +331,7 @@ function displayFetchedDateNotice(date) {
 
   document.getElementById("viewing-date-notice").textContent =
     "Showing page on " + formatDateForDisplay(date)
-  document.getElementById("viewing-date-notice").style.display = "block"
+  document.getElementById("viewing-date-notice").style.display = "flex"
 }
 
 /**
