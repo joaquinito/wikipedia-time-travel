@@ -16,9 +16,9 @@ const FIREFOX_EXTENSION_UUID = "d4d5e5f0-0a1b-4c2d-8e3f-a1b2c3d4e5f6"
 // slowMo run). Timeouts are deliberately generous so a slow response is waited out rather than
 // reported as a failure; the per-step deadlines are shorter than the per-test one so a genuine
 // hang still surfaces as a pointed error rather than an opaque jest timeout.
-const READY_TIMEOUT_MS = 60000 // waiting for popup text to arrive from the API
-const NAV_TIMEOUT_MS = 60000 // waiting for a Wikipedia revision page to load
-const TEST_TIMEOUT_MS = 180000 // per-test / per-hook ceiling
+const READY_TIMEOUT_MS = 120000 // waiting for popup text to arrive from the API
+const NAV_TIMEOUT_MS = 90000 // waiting for a Wikipedia revision page to load
+const TEST_TIMEOUT_MS = 240000 // per-test / per-hook ceiling
 
 async function waitFor(milliseconds) {
   return new Promise((resolve) => {

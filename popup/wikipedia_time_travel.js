@@ -23,32 +23,35 @@ const API_REQUEST_HEADERS = {
   "Api-User-Agent": "WikipediaTimeTravel/1.0 (https://github.com/joaquinito/wikipedia-time-travel)",
 }
 
+const API_ATTEMPT_TIMEOUT_MS = 15000 // abort a stalled request after this long
+const API_RETRIES = 3 // extra attempts after the first
+
 /**
- * Fetch a URL and parse its JSON body, retrying a few times with a short backoff
- * on a network error or a non-OK response. The MediaWiki API is normally fast and
- * reliable, but a single transient failure (a dropped connection, a brief 429/503)
- * would otherwise leave the popup stuck on its loading skeleton for good, since the
- * callers below dereference the parsed body directly. A couple of quick retries make
- * that path far more robust — noticeably so in CI, which hits the live API in bursts.
+ * Fetch a URL and parse its JSON body, retrying with backoff on a network error,
+ * a non-OK response, or a stalled request (each attempt capped by an AbortController).
  * @param {string} url - URL to fetch
  * @param {object} [options] - fetch() options
  * @param {number} [retries] - How many extra attempts to make after the first
  * @returns {Promise<object>} - Parsed JSON body
  */
-async function fetchJsonWithRetry(url, options = {}, retries = 3) {
+async function fetchJsonWithRetry(url, options = {}, retries = API_RETRIES) {
   let lastError
   for (let attempt = 0; attempt <= retries; attempt++) {
     if (attempt > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 500 * attempt))
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
     }
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), API_ATTEMPT_TIMEOUT_MS)
     try {
-      const response = await fetch(url, options)
+      const response = await fetch(url, { ...options, signal: controller.signal })
       if (!response.ok) {
         throw new Error("MediaWiki API responded with HTTP " + response.status)
       }
       return await response.json()
     } catch (error) {
       lastError = error
+    } finally {
+      clearTimeout(timeoutId)
     }
   }
   throw lastError

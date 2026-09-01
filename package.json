@@ -11,7 +11,7 @@
     "postinstall": "puppeteer browsers install firefox",
     "build": "web-ext build --overwrite-dest ",
     "test": "jest --testEnvironment=jsdom tests/unit",
-    "e2e": "jest --preset=jest-puppeteer tests/e2e",
+    "e2e": "jest --preset=jest-puppeteer --runInBand tests/e2e",
     "e2e:chrome": "jest --preset=jest-puppeteer tests/e2e/chrome.test.js",
     "e2e:firefox": "jest --preset=jest-puppeteer tests/e2e/firefox.test.js"
   },
