@@ -278,7 +278,7 @@ function definePopupTests(target) {
 
         const noticeText = await readTextWhenReady(extensionPage, "#viewing-date-notice")
 
-        expect(noticeText).toBe("Currently showing page on April 7, 2014")
+        expect(noticeText).toBe("Showing page on April 7, 2014")
 
         const datePickerValue = await extensionPage.$eval("#date-picker", (el) => el.value)
         expect(datePickerValue).toBe("2014-04-07")
@@ -361,7 +361,7 @@ function definePopupTests(target) {
 
         const noticeText = await readTextWhenReady(extensionPage, "#viewing-date-notice")
 
-        expect(noticeText).toBe("Currently showing page on April 7, 2014")
+        expect(noticeText).toBe("Showing page on April 7, 2014")
       }, TEST_TIMEOUT_MS)
 
       test("the quick jump is relative to the currently shown date, not always today", async () => {
@@ -375,7 +375,7 @@ function definePopupTests(target) {
         await extensionPage.click("#submit-button")
 
         const firstNoticeText = await readTextWhenReady(extensionPage, "#viewing-date-notice")
-        expect(firstNoticeText).toBe("Currently showing page on August 22, 2025")
+        expect(firstNoticeText).toBe("Showing page on August 22, 2025")
 
         // The default "1 year ago" quick jump should now be relative to 22 August 2025,
         // not to today
@@ -385,7 +385,7 @@ function definePopupTests(target) {
           until: (text) => text !== "" && text !== firstNoticeText,
         })
 
-        expect(secondNoticeText).toBe("Currently showing page on August 22, 2024")
+        expect(secondNoticeText).toBe("Showing page on August 22, 2024")
       }, TEST_TIMEOUT_MS)
     })
 

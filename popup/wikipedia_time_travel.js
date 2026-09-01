@@ -319,7 +319,7 @@ async function displayWikipediaPageData(pageName, language) {
 }
 
 /**
- * Show the "Currently showing page on <date>" notice below the creation date,
+ * Show the "Showing page on <date>" notice below the creation date,
  * unless that date is today, in which case this is simply the current version of the page.
  * @param {string} date - Date in the format "YYYY-MM-DD"
  */
@@ -330,12 +330,12 @@ function displayFetchedDateNotice(date) {
   if (date === today) return
 
   document.getElementById("viewing-date-notice").textContent =
-    "Currently showing page on " + formatDateForDisplay(date)
+    "Showing page on " + formatDateForDisplay(date)
   document.getElementById("viewing-date-notice").style.display = "block"
 }
 
 /**
- * Hide the "Currently showing page on <date>" notice, e.g. while a new jump
+ * Hide the "Showing page on <date>" notice, e.g. while a new jump
  * is in flight and its own status message is showing instead.
  */
 function hideFetchedDateNotice() {
@@ -347,7 +347,7 @@ function hideFetchedDateNotice() {
  * The Wikipedia navigation this precedes can itself take several seconds on
  * uncached old revisions, so this is purely to reassure the user the click
  * registered rather than to reflect our own (fast) API calls.
- * Mutually exclusive with the "Currently showing page on" notice: only one
+ * Mutually exclusive with the "Showing page on" notice: only one
  * of the two is ever visible at a time.
  * @param {string|null} message - Text to show, or null to hide the status line
  * @param {boolean} [isError] - Whether to style the message as an error

@@ -121,6 +121,10 @@ body {
 
 #viewing-date-notice {
   margin-top: 6px;
+  padding: 8px 10px;
+  background-color: var(--wtt-bg-subtle);
+  border: 1px solid var(--wtt-border);
+  border-radius: var(--wtt-radius);
   color: var(--wtt-text);
   font-size: 12.5px;
   font-weight: bold;
