@@ -21,6 +21,12 @@
     "scripts": ["background.js"]
   },
 
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "wikipedia-time-travel@joaquinito.github.io"
+    }
+  },
+
   "permissions": [
     "activeTab",
     "storage"
