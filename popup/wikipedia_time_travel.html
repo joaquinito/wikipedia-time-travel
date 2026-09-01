@@ -1,25 +1,117 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="utf-8">
   <title>Wikipedia Time Travel</title>
   <link rel="stylesheet" type="text/css" href="wikipedia_time_travel.css">
   <script src="wikipedia_time_travel.js"></script>
 </head>
 <body>
-  <h2 id="extension-title">Wikipedia Time Travel</h2>
-  <hr class="solid">
-  <div class="lds-ellipsis" id="loader"><div></div><div></div><div></div><div></div></div>
-  <div id="loaded-content">
-    <div id="placeholder-message" hidden>Open a Wikipedia page to use this extension.</div>
-    <div id="article-info"> 
-      <div id="article-name"></div>
-      <div id="article-creation-date"></div>
+
+  <header id="extension-header">
+    <h2 id="extension-title">Wikipedia Time Travel</h2>
+  </header>
+
+  <main id="content">
+
+    <!-- Skeleton shown while the MediaWiki API call is in flight -->
+    <div id="loader" aria-hidden="true">
+      <div class="skeleton skeleton-title"></div>
+      <div class="skeleton skeleton-line"></div>
+      <div class="skeleton skeleton-block"></div>
     </div>
-    <div id="form-body" hidden>
-      Open this page on
-      <input type="date" id="date-picker">
-      <button id="submit-button">Go</button>
+
+    <div id="loaded-content">
+
+      <div id="placeholder-message" hidden>
+        <span class="placeholder-text">Open a Wikipedia page to use this extension.</span>
+      </div>
+
+      <div id="article-info">
+        <div id="article-name"></div>
+        <div id="article-meta">
+          <svg class="meta-icon" viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"
+               fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="10" cy="10" r="7"/>
+            <path d="M10 5.6V10l3 1.8"/>
+          </svg>
+          <div id="article-creation-date"></div>
+        </div>
+        <div id="viewing-date-notice" hidden></div>
+      </div>
+
+      <div id="jump-status" hidden></div>
+
+      <div id="form-body" hidden>
+        <label class="panel-section-label">Quick jump</label>
+        <div class="panel-row">
+          <div class="spinner-wrap">
+            <input type="number" id="relative-amount" class="quick-edit-input" min="1" max="999" value="1">
+            <div class="spinner-buttons">
+              <button type="button" class="spinner-btn spinner-btn-up" tabindex="-1" aria-label="Increase amount">▲</button>
+              <button type="button" class="spinner-btn spinner-btn-down" tabindex="-1" aria-label="Decrease amount">▼</button>
+            </div>
+          </div>
+          <select id="relative-unit" class="quick-edit-select">
+            <option value="days">day(s)</option>
+            <option value="weeks">week(s)</option>
+            <option value="months">month(s)</option>
+            <option value="years" selected>year(s)</option>
+          </select>
+          <span class="quick-edit-suffix">ago</span>
+          <button id="relative-go-button" class="icon-go-button" aria-label="Go">
+            <svg class="button-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="panel-divider"></div>
+
+        <label id="date-picker-label" class="panel-section-label">Or pick an exact date</label>
+        <div class="panel-row">
+          <input type="hidden" id="date-picker">
+          <div id="date-picker-spinner" class="date-spinner">
+            <div class="spinner-wrap" data-unit="day">
+              <input type="number" inputmode="numeric" class="quick-edit-input date-segment-input"
+                     id="date-segment-day" data-unit="day" aria-label="Day" min="1" max="31">
+              <div class="spinner-buttons">
+                <button type="button" class="spinner-btn spinner-btn-up" tabindex="-1" aria-label="Increase day">▲</button>
+                <button type="button" class="spinner-btn spinner-btn-down" tabindex="-1" aria-label="Decrease day">▼</button>
+              </div>
+            </div>
+            <div class="spinner-wrap" data-unit="month">
+              <input type="number" inputmode="numeric" class="quick-edit-input date-segment-input"
+                     id="date-segment-month" data-unit="month" aria-label="Month" min="1" max="12">
+              <div class="spinner-buttons">
+                <button type="button" class="spinner-btn spinner-btn-up" tabindex="-1" aria-label="Increase month">▲</button>
+                <button type="button" class="spinner-btn spinner-btn-down" tabindex="-1" aria-label="Decrease month">▼</button>
+              </div>
+            </div>
+            <div class="spinner-wrap" data-unit="year">
+              <input type="number" inputmode="numeric" class="quick-edit-input date-segment-input date-segment-input-year"
+                     id="date-segment-year" data-unit="year" aria-label="Year" min="1">
+              <div class="spinner-buttons">
+                <button type="button" class="spinner-btn spinner-btn-up" tabindex="-1" aria-label="Increase year">▲</button>
+                <button type="button" class="spinner-btn spinner-btn-down" tabindex="-1" aria-label="Decrease year">▼</button>
+              </div>
+            </div>
+          </div>
+          <button id="submit-button" class="icon-go-button" aria-label="Go">
+            <svg class="button-icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
     </div>
-  </div>
+  </main>
+
 </body>
 </html>

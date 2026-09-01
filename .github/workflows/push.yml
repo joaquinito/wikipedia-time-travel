@@ -8,15 +8,18 @@ jobs:
 
     steps:
     - name: Check out code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Use Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
-        node-version: '21'
+        node-version: '24'
 
     - name: Install dependencies
       run: npm install
+
+    - name: Install browsers for Puppeteer
+      run: npx puppeteer browsers install chrome firefox
 
     - name: Run unit tests
       run: npm test
@@ -32,11 +35,11 @@ jobs:
       run: echo "VERSION=$(jq -r .version manifest.json)" >> $GITHUB_OUTPUT
 
     - name: Upload project zip folder
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: wikipedia_time_travel_${{steps.get_version.outputs.VERSION}}
         path: | 
           manifest.json
           background.js 
-          popup/ 
-          img/icons/ 
+          popup/
+          img/icons/

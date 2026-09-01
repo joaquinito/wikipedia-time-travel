@@ -1,15 +1,22 @@
 const {
   isWikipediaPage,
   isSelectedDateValid,
+  getDateSegmentOrder,
+  daysInMonth,
+  parseDateParts,
+  formatDateParts,
   getPageLanguage,
   getWikipediaPageName,
-  getCreationDate
+  getCreationDate,
+  getRelativeDateString,
+  getRevisionIdFromUrl,
+  formatDateForDisplay,
+  setJumpStatus
 } = require("../../popup/wikipedia_time_travel")
 
 const fetchMock = require('jest-fetch-mock');
 fetchMock.enableMocks();
 
-// Tests for isWikipediaPage()
 describe("Function isWikipediaArticle() ", () => {
 
   test("returns true for regular Wikipedia article URLs (/wiki/<article_name>)", () => {
@@ -29,7 +36,6 @@ describe("Function isWikipediaArticle() ", () => {
   })
 })
 
-// Tests for getWikipediaPageName()
 describe("Function getWikipediaPageName() ", () => {
 
   beforeEach(() => {
@@ -72,7 +78,6 @@ describe("Function getWikipediaPageName() ", () => {
 })
 
 
-// Tests for getPageLanguage()
 describe("Function getPageLanguage() ", () => {
 
   test("returns the language code of the Wikipedia page", () => {
@@ -80,7 +85,6 @@ describe("Function getPageLanguage() ", () => {
   })
 })
 
-// Tests for getCreationDate()
 describe("Function getCreationDate() ", () => {
    
   beforeEach(() => {
@@ -113,8 +117,6 @@ describe("Function getCreationDate() ", () => {
 
 })
 
-
-// Tests for isSelectedDateValid()
 describe("Function isSelectedDateValid() ", () => {
 
   test("returns true if the selected date is between input.min and current date", () => {
@@ -156,5 +158,208 @@ describe("Function isSelectedDateValid() ", () => {
     }
     expect(isSelectedDateValid(datePickerObj)).toBe(false)
   })
-  
+
+  test("returns false, without throwing, for a value that is not a well-formed date (e.g. free-typed text on the Firefox fallback)", () => {
+    const datePickerObj = {
+      value: "not-a-date",
+      min: "2003-01-01T20:05:01.983Z"
+    }
+    expect(() => isSelectedDateValid(datePickerObj)).not.toThrow()
+    expect(isSelectedDateValid(datePickerObj)).toBe(false)
+  })
+
+  test("returns false for a value in a different format than YYYY-MM-DD", () => {
+    const datePickerObj = {
+      value: "04/07/2014",
+      min: "2003-01-01T20:05:01.983Z"
+    }
+    expect(isSelectedDateValid(datePickerObj)).toBe(false)
+  })
+
+})
+
+describe("Function getDateSegmentOrder() ", () => {
+
+  test("puts the month before the day for American English (mm/dd/yyyy)", () => {
+    expect(getDateSegmentOrder("en-US")).toEqual(["month", "day", "year"])
+  })
+
+  test("puts the day before the month for every other locale (dd/mm/yyyy)", () => {
+    expect(getDateSegmentOrder("en-GB")).toEqual(["day", "month", "year"])
+    expect(getDateSegmentOrder("pt-PT")).toEqual(["day", "month", "year"])
+    expect(getDateSegmentOrder("es-ES")).toEqual(["day", "month", "year"])
+    expect(getDateSegmentOrder("en")).toEqual(["day", "month", "year"])
+  })
+
+})
+
+describe("Function daysInMonth() ", () => {
+
+  test("returns 31 for a 31-day month", () => {
+    expect(daysInMonth(2014, 1)).toBe(31)
+  })
+
+  test("returns 30 for a 30-day month", () => {
+    expect(daysInMonth(2014, 4)).toBe(30)
+  })
+
+  test("returns 29 for February in a leap year", () => {
+    expect(daysInMonth(2024, 2)).toBe(29)
+  })
+
+  test("returns 28 for February in a non-leap year", () => {
+    expect(daysInMonth(2023, 2)).toBe(28)
+  })
+
+})
+
+describe("Function parseDateParts() ", () => {
+
+  test("parses a well-formed YYYY-MM-DD string", () => {
+    expect(parseDateParts("2014-04-07")).toEqual({ year: 2014, month: 4, day: 7 })
+  })
+
+  test("returns null for an empty string", () => {
+    expect(parseDateParts("")).toBe(null)
+  })
+
+  test("returns null for a malformed value, without throwing", () => {
+    expect(() => parseDateParts("not-a-date")).not.toThrow()
+    expect(parseDateParts("not-a-date")).toBe(null)
+  })
+
+  test("returns null for a value in a different format", () => {
+    expect(parseDateParts("04/07/2014")).toBe(null)
+  })
+
+})
+
+describe("Function formatDateParts() ", () => {
+
+  test("formats numeric parts as a zero-padded YYYY-MM-DD string", () => {
+    expect(formatDateParts({ year: 2014, month: 4, day: 7 })).toBe("2014-04-07")
+  })
+
+  test("does not add extra padding when the parts are already two digits", () => {
+    expect(formatDateParts({ year: 2014, month: 12, day: 31 })).toBe("2014-12-31")
+  })
+
+})
+
+describe("Function getRelativeDateString() ", () => {
+
+  function isoDaysAgo(days) {
+    const date = new Date()
+    date.setDate(date.getDate() - days)
+    return date.toISOString().split("T")[0]
+  }
+
+  test("returns the date N days before today", () => {
+    expect(getRelativeDateString(10, "days", "2000-01-01")).toBe(isoDaysAgo(10))
+  })
+
+  test("returns the date N weeks before today", () => {
+    expect(getRelativeDateString(2, "weeks", "2000-01-01")).toBe(isoDaysAgo(14))
+  })
+
+  test("returns the date N months before today", () => {
+    const expected = new Date()
+    expected.setMonth(expected.getMonth() - 3)
+    expect(getRelativeDateString(3, "months", "2000-01-01")).toBe(
+      expected.toISOString().split("T")[0]
+    )
+  })
+
+  test("returns the date N years before today, which is the default", () => {
+    const expected = new Date()
+    expected.setFullYear(expected.getFullYear() - 1)
+    expect(getRelativeDateString(1, "years", "2000-01-01")).toBe(
+      expected.toISOString().split("T")[0]
+    )
+  })
+
+  test("clamps to minDate when the computed date would be earlier", () => {
+    expect(getRelativeDateString(50, "years", "2010-06-15")).toBe("2010-06-15")
+  })
+
+  test("treats a missing or non-numeric amount as 1", () => {
+    expect(getRelativeDateString(undefined, "years", "2000-01-01")).toBe(
+      getRelativeDateString(1, "years", "2000-01-01")
+    )
+  })
+
+  test("returns the date N years before a given reference date, instead of today", () => {
+    expect(getRelativeDateString(1, "years", "2000-01-01", "2025-08-22")).toBe("2024-08-22")
+  })
+
+  test("returns the date N months before a given reference date", () => {
+    expect(getRelativeDateString(3, "months", "2000-01-01", "2025-08-22")).toBe("2025-05-22")
+  })
+
+  test("clamps a reference-date computation to minDate when it would be earlier", () => {
+    expect(getRelativeDateString(50, "years", "2010-06-15", "2025-08-22")).toBe("2010-06-15")
+  })
+})
+
+// Tests for getRevisionIdFromUrl()
+describe("Function getRevisionIdFromUrl() ", () => {
+
+  test("returns the revision id from a URL that has one", () => {
+    expect(getRevisionIdFromUrl("https://en.wikipedia.org/w/index.php?&oldid=602452976")).toBe(
+      "602452976"
+    )
+  })
+
+  test("returns null for a URL without a revision id", () => {
+    expect(getRevisionIdFromUrl("https://en.wikipedia.org/wiki/Lisbon")).toBe(null)
+  })
+})
+
+// Tests for formatDateForDisplay()
+describe("Function formatDateForDisplay() ", () => {
+  const originalLanguage = navigator.language
+
+  afterEach(() => {
+    Object.defineProperty(navigator, "language", { value: originalLanguage, configurable: true })
+  })
+
+  test("formats the date following an English browser locale", () => {
+    Object.defineProperty(navigator, "language", { value: "en-US", configurable: true })
+    expect(formatDateForDisplay("2020-07-10")).toBe("July 10, 2020")
+  })
+
+  test("falls back to day/month/year order for a non-English browser locale", () => {
+    Object.defineProperty(navigator, "language", { value: "pt-PT", configurable: true })
+    expect(formatDateForDisplay("2020-07-10")).toBe("10 July 2020")
+  })
+})
+
+describe("Function setJumpStatus() ", () => {
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="jump-status" hidden></div>'
+  })
+
+  test("shows the message and un-hides the status line", () => {
+    setJumpStatus("Loading previous version of the page...")
+
+    const status = document.getElementById("jump-status")
+    expect(status.textContent).toBe("Loading previous version of the page...")
+    expect(status.hidden).toBe(false)
+    expect(status.classList.contains("is-error")).toBe(false)
+  })
+
+  test("hides the status line and clears its text when passed null", () => {
+    setJumpStatus("Loading previous version of the page...")
+    setJumpStatus(null)
+
+    const status = document.getElementById("jump-status")
+    expect(status.hidden).toBe(true)
+    expect(status.textContent).toBe("")
+  })
+
+  test("marks the message as an error when isError is true", () => {
+    setJumpStatus("Could not load that revision.", true)
+    expect(document.getElementById("jump-status").classList.contains("is-error")).toBe(true)
+  })
 })

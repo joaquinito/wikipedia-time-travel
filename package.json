@@ -1,6 +1,6 @@
 {
   "name": "wikipedia-time-travel",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Browser extension to get the state of a Wikipedia article in a past date.",
   "author": "Ricardo Joaquinito",
   "license": "MIT License",
@@ -8,18 +8,21 @@
     "test": "tests"
   },
   "scripts": {
+    "postinstall": "puppeteer browsers install firefox",
     "build": "web-ext build --overwrite-dest ",
     "test": "jest --testEnvironment=jsdom tests/unit",
-    "e2e": "jest --preset=jest-puppeteer tests/e2e"
+    "e2e": "jest --preset=jest-puppeteer --runInBand tests/e2e",
+    "e2e:chrome": "jest --preset=jest-puppeteer tests/e2e/chrome.test.js",
+    "e2e:firefox": "jest --preset=jest-puppeteer tests/e2e/firefox.test.js"
   },
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "jest-fetch-mock": "^3.0.3",
-    "jest-puppeteer": "^10.0.1",
+    "jest-puppeteer": "^11.0.0",
     "jsdom": "^24.0.0",
     "node-fetch": "^3.3.2",
-    "puppeteer": "^22.6.3",
+    "puppeteer": "^24.10.0",
     "web-ext": "^7.2.0"
   }
 }

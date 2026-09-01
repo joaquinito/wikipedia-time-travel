@@ -1,27 +1,43 @@
 {
   "manifest_version": 3,
   "name": "Wikipedia Time Travel",
-  "version": "0.2",
+  "version": "1.0",
   "author": "Ricardo Joaquinito",
   "description": "See how Wikipedia pages evolved over time.",
 
   "icons": {
-    "48": "img/icons/wtt_icon.png"
+    "256": "img/icons/wtt_icon_256.png",
+    "1024": "img/icons/wtt_icon_1024.png"
   },
 
   "action": {
     "default_popup": "popup/wikipedia_time_travel.html",
     "default_icon": {
-      "48": "img/icons/wtt_icon.png"
-    }
+      "256": "img/icons/wtt_icon_256.png"
+    },
+    "theme_icons": [
+      {
+        "light": "img/icons/wtt_icon_light_512.png",
+        "dark": "img/icons/wtt_icon_256.png",
+        "size": 256
+      }
+    ]
   },
 
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "wikipedia-time-travel@joaquinito.github.io"
+    }
   },
 
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage"
   ]
 
 }

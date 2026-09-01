@@ -1,9 +1,9 @@
 # Wikipedia Time Travel
 
 <p align="center">
-  <img src="icons/wtt_icon2.png" alt="wtt logo" width="200">
+  <img src="img/icons/wtt_icon_1024.png" alt="wtt logo" width="200">
   <br>
-  <a rel="noreferrer noopener" href="https://chromewebstore.google.com/detail/wikipedia-time-travel/fibnhbiiflnnpjamjjdlcdmhljibkpbp"><img alt="Chrome Web Store" src="https://storage.googleapis.com/web-dev-uploads/image/WlD8wC6g8khYWPJUsQceQkhXSlv1/UV4C4ybeBTsZt43U4xis.png"></a> 
+  <a rel="noreferrer noopener" href="https://chromewebstore.google.com/detail/wikipedia-time-travel/fibnhbiiflnnpjamjjdlcdmhljibkpbp"><img alt="Chrome Web Store" src="https://developer.chrome.com/static/docs/webstore/branding/image/UV4C4ybeBTsZt43U4xis.png"></a> 
 </p>
 
 Wikipedia Time Travel is a browser extension that lets you check how the text and images of Wikipedia pages have changed over time. It gets the version of a Wikipedia page that was most recent at the end of any date of your choice. Additionally, it tells you when the page was created.
@@ -16,13 +16,22 @@ Wikipedia Time Travel is a browser extension that lets you check how the text an
 4. Click the `Load unpacked` button and select this extension's folder.
 5. The extension should now be installed and ready to use in the extensions list.
 
+## Installation on Mozilla Firefox (from file)
+
+1. Clone this repository to your local machine.
+2. Open `about:debugging` in Firefox.
+3. Select `This Firefox` in the sidebar.
+4. Click the `Load Temporary Add-on` button and select this extension's `manifest.json` file.
+5. The extension should now be installed and ready to use until Firefox is restarted.
+
 ## How to use
 
-1. Navigate to any Wikipedia page.
-2. Click on the extension icon in the browser toolbar.
-3. Enter the date you want to check the page for.
-4. Click on the `Go` button.
-5. The page will be reloaded with the version of the page that was most recent at the end of the date you entered.
+1. Navigate to any Wikipedia page and click the extension icon in the toolbar.
+2. The popup shows the page name and the date it was created.
+3. Pick a date in one of two ways:
+   - **Quick jump**: choose an amount and a unit (e.g. `2 years ago`), then click the arrow button. This is relative to the date currently being shown.
+   - **Exact date**: choose a day, month and year in the date picker, then click the arrow button.
+4. The tab reloads with the version of the page that was most recent at the end of that day, and the popup shows a `Showing page on <date>` notice.
 
 
 ## Running tests 
@@ -36,4 +45,6 @@ Pre-requisite: Install Node.js.
 
 ## Feedback and contributions
 
-If you'd like to raise an issue, please do so in the Issues section of this repository. If you'd like to contribute, please fork this repository and submit a pull request.
+If you'd like to raise an issue, please do so in the Issues section of this repository. 
+
+If you'd like to contribute, please fork this repository and submit a pull request.
