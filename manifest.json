@@ -6,14 +6,22 @@
   "description": "See how Wikipedia pages evolved over time.",
 
   "icons": {
-    "48": "img/icons/wtt_icon.png"
+    "256": "img/icons/wtt_icon_256.png",
+    "1024": "img/icons/wtt_icon_1024.png"
   },
 
   "action": {
     "default_popup": "popup/wikipedia_time_travel.html",
     "default_icon": {
-      "48": "img/icons/wtt_icon.png"
-    }
+      "256": "img/icons/wtt_icon_256.png"
+    },
+    "theme_icons": [
+      {
+        "light": "img/icons/wtt_icon_light_512.png",
+        "dark": "img/icons/wtt_icon_256.png",
+        "size": 256
+      }
+    ]
   },
 
   "background": {

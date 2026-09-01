@@ -1,7 +1,7 @@
 # Wikipedia Time Travel
 
 <p align="center">
-  <img src="icons/wtt_icon2.png" alt="wtt logo" width="200">
+  <img src="img/icons/wtt_icon_1024.png" alt="wtt logo" width="200">
   <br>
   <a rel="noreferrer noopener" href="https://chromewebstore.google.com/detail/wikipedia-time-travel/fibnhbiiflnnpjamjjdlcdmhljibkpbp"><img alt="Chrome Web Store" src="https://developer.chrome.com/static/docs/webstore/branding/image/UV4C4ybeBTsZt43U4xis.png"></a> 
 </p>

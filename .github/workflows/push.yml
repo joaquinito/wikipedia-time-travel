@@ -41,5 +41,5 @@ jobs:
         path: | 
           manifest.json
           background.js 
-          popup/ 
-          img/icons/ 
+          popup/
+          img/icons/
